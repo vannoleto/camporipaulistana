@@ -1,0 +1,295 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-light: #ffffff;
+  --color-dark: #171717;
+}
+
+.accent-text {
+  @apply text-slate-600;
+}
+
+body {
+  font-family:
+    "Inter Variable",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
+  color: var(--color-dark);
+  background: var(--color-light);
+}
+
+/* only use this to update the style of the auth input fields. use a different class for all other input fields */
+.auth-input-field {
+  @apply w-full px-4 py-3 rounded-container bg-white border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-shadow shadow-sm hover:shadow;
+}
+
+/* only use this to update the style of the auth buttons. use the button class for all other buttons */
+.auth-button {
+  @apply w-full px-4 py-3 rounded bg-primary text-white font-semibold hover:bg-primary-hover transition-colors shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* Mobile App Native Styles */
+.mobile-container {
+  @apply min-h-screen bg-gradient-to-br from-orange-200 via-orange-100 to-yellow-100;
+  /* iOS-style scrolling */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-header {
+  @apply bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-b-3xl shadow-lg;
+}
+
+.mobile-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50;
+  /* iOS-style blur */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.nav-item {
+  @apply flex flex-col items-center py-2 px-3 transition-all duration-200;
+  /* Tap feedback */
+  -webkit-tap-highlight-color: rgba(79, 70, 229, 0.1);
+  transform: scale(1);
+}
+
+.nav-item:active {
+  transform: scale(0.95);
+  transition-duration: 100ms;
+}
+
+.nav-item.active {
+  @apply text-indigo-600;
+}
+
+.nav-item:not(.active) {
+  @apply text-gray-500 hover:text-gray-700;
+}
+
+/* Button press animations */
+.mobile-button {
+  @apply transition-all duration-150 active:scale-95;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Card interactions */
+.mobile-card {
+  @apply bg-white rounded-2xl shadow-sm transition-all duration-200;
+  transform: translateY(0px);
+}
+
+.mobile-card:active {
+  transform: translateY(2px);
+  @apply shadow-lg;
+}
+
+/* Circular progress with smooth animations */
+.circular-progress {
+  @apply transform transition-all duration-700 ease-out;
+}
+
+.goal-card {
+  @apply bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200;
+  -webkit-tap-highlight-color: rgba(79, 70, 229, 0.05);
+}
+
+.goal-card:active {
+  transform: scale(0.98);
+  @apply shadow-lg;
+}
+
+.goal-grid {
+  @apply grid grid-cols-2 gap-4;
+}
+
+/* Safe area handling for notched devices */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Custom scrollbars for mobile */
+.mobile-scroll::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Smooth scrolling behavior */
+.mobile-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pull-to-refresh styles */
+.pull-to-refresh {
+  @apply transition-transform duration-200 ease-out;
+}
+
+/* Toast animations */
+@keyframes slideInFromTop {
+  from {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToTop {
+  from {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%) translateY(-100%);
+    opacity: 0;
+  }
+}
+
+/* Swipe indicator */
+.swipe-indicator {
+  @apply absolute bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-gray-300 rounded-full opacity-50;
+}
+
+/* Haptic feedback class */
+.haptic-feedback {
+  @apply transition-all duration-100;
+}
+
+.haptic-feedback:active {
+  @apply scale-95;
+}
+
+/* Status bar blur effect */
+.status-bar-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Responsive grid adjustments */
+@media (min-width: 768px) {
+  .goal-grid {
+    @apply grid-cols-3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .goal-grid {
+    @apply grid-cols-4;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-nav {
+    background: rgba(17, 24, 39, 0.95);
+    @apply border-gray-700;
+  }
+  
+  .mobile-card {
+    @apply bg-gray-800 text-white;
+  }
+}
+
+/* PWA Styles */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+}
+
+/* Animações personalizadas */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .mobile-optimized {
+    touch-action: manipulation;
+  }
+}
+
+/* Prevent text selection on mobile */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Animação customizada para botão QR Code */
+@keyframes pulse-slow {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* Better touch targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Status bar safe area for iOS */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pwa-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .pwa-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

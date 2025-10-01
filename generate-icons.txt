@@ -1,0 +1,13 @@
+# Script para gerar ícones PWA
+# Este script deve ser executado para criar os ícones necessários
+
+echo "Para criar os ícones PWA, você pode usar a imagem aventuri.png existente."
+echo "Recomendamos usar uma ferramenta online como:"
+echo "1. https://www.pwabuilder.com/imageGenerator"
+echo "2. https://tools.crawlink.com/tools/pwa-icon-generator/"
+echo ""
+echo "Ou instalar sharp para gerar automaticamente:"
+echo "npm install sharp"
+echo ""
+echo "Depois criar um script Node.js para redimensionar a imagem para todos os tamanhos necessários:"
+echo "- 72x72, 96x96, 128x128, 144x144, 152x152, 192x192, 384x384, 512x512"
