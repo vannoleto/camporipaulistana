@@ -1,9 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
-import { Crown, Globe, Building2, UserCheck, Zap } from "lucide-react";
+import { Crown, Globe, Building2, UserCheck, Zap, ArrowLeft, Lock, User, Key, Sparkles, MapPin, Users } from "lucide-react";
 import aventuriLogo from "../aventuri.png";
+
+// Adicionar animações CSS inline
+const animationStyles = `
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+`;
+
+// Injetar estilos
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = animationStyles;
+if (!document.querySelector('style[data-profile-animations]')) {
+  styleSheet.setAttribute('data-profile-animations', 'true');
+  document.head.appendChild(styleSheet);
+}
 
 interface ProfileSelectionProps {
   onLogin: (user: any) => void;
@@ -137,133 +178,162 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
   };
 
   const renderAdminLogin = () => (
-    <form onSubmit={handleLogin} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+    <form onSubmit={handleLogin} className="space-y-6">
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+          <Lock size={16} className="text-red-500" />
           Senha do Administrador
         </label>
-        <input
-          type="password"
-          value={formData.password}
-          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-          placeholder="Digite a senha de administrador"
-          required
-        />
+        <div className="relative">
+          <input
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-400 focus:border-red-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+        <p className="text-xs text-gray-500">Digite sua senha de acesso administrativo</p>
       </div>
+      
       <button
         type="submit"
-        className="w-full bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors font-semibold"
+        className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-6 rounded-2xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
       >
-        Entrar como Administrador
+        <Crown size={20} />
+        <span>Entrar como Administrador</span>
       </button>
     </form>
   );
 
   const renderLoginForm = () => (
-    <div className="space-y-4">
-      <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nome
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-2">Fazer Login</h3>
+        <p className="text-sm text-gray-600">Entre com suas credenciais</p>
+      </div>
+      
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+            <User size={16} className="text-blue-500" />
+            Nome de Usuário
           </label>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
             placeholder="Digite seu nome"
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+            <Key size={16} className="text-blue-500" />
             Senha
           </label>
           <input
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Digite sua senha"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            placeholder="••••••••"
             required
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-6 rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
         >
-          Entrar
+          <UserCheck size={20} />
+          <span>Entrar</span>
         </button>
       </form>
 
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-3 bg-white text-gray-500">ou</span>
+        </div>
+      </div>
+
       <div className="text-center">
-        <p className="text-sm text-gray-600 mb-3">Ainda não tem conta?</p>
+        <p className="text-sm text-gray-600 mb-4">Ainda não tem uma conta?</p>
         <button
           onClick={() => setShowRegisterForm(true)}
-          className="text-blue-500 hover:text-blue-700 font-medium"
+          className="w-full border-2 border-gray-200 text-gray-700 py-3 px-6 rounded-2xl hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 font-semibold flex items-center justify-center space-x-2"
         >
-          Cadastre-se aqui
+          <Sparkles size={18} className="text-purple-500" />
+          <span>Criar Nova Conta</span>
         </button>
       </div>
     </div>
   );
 
   const renderRegisterForm = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Cadastro</h3>
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-2">Criar Nova Conta</h3>
+        <p className="text-sm text-gray-600">Preencha os dados para se cadastrar</p>
         <button
           onClick={() => setShowRegisterForm(false)}
-          className="text-gray-500 hover:text-gray-700"
+          className="mt-3 text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center justify-center mx-auto space-x-1"
         >
-          ← Voltar para login
+          <ArrowLeft size={14} />
+          <span>Voltar para login</span>
         </button>
       </div>
 
-      <form onSubmit={handleRegister} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nome
+      <form onSubmit={handleRegister} className="space-y-5">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+            <User size={16} className="text-green-500" />
+            Nome Completo
           </label>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            placeholder="Digite seu nome"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            placeholder="Digite seu nome completo"
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+            <Key size={16} className="text-green-500" />
             Senha
           </label>
           <input
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            placeholder="Digite sua senha"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            placeholder="Crie uma senha segura"
             required
           />
         </div>
 
         {selectedProfile === "regional" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <MapPin size={16} className="text-green-500" />
               Região
             </label>
             <select
               value={formData.region}
               onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
               required
             >
-              <option value="">Selecione a região</option>
+              <option value="">Selecione sua região</option>
               {regions.map((region) => (
                 <option key={region} value={region}>
                   {region}
@@ -275,24 +345,26 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
 
         {selectedProfile === "director" && (
           <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                <UserCheck size={16} className="text-green-500" />
                 Função
               </label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
                 required
               >
-                <option value="">Selecione a função</option>
+                <option value="">Selecione sua função</option>
                 <option value="director">Diretor</option>
                 <option value="secretary">Secretário</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                <MapPin size={16} className="text-green-500" />
                 Região
               </label>
               <select
@@ -300,7 +372,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
                 onChange={(e) => {
                   setFormData({ ...formData, region: e.target.value, clubName: "" });
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
                 required
               >
                 <option value="">Selecione a região</option>
@@ -313,17 +385,18 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
             </div>
 
             {formData.region && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                  <Users size={16} className="text-green-500" />
                   Clube
                 </label>
                 <select
                   value={formData.clubName}
                   onChange={(e) => setFormData({ ...formData, clubName: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
                   required
                 >
-                  <option value="">Selecione o clube</option>
+                  <option value="">Selecione seu clube</option>
                   {listClubs
                     ?.filter(club => club.region === formData.region)
                     .sort((a, b) => a.name.localeCompare(b.name))
@@ -340,76 +413,123 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
 
         <button
           type="submit"
-          className="w-full bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors font-semibold"
+          className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-2xl hover:from-green-600 hover:to-green-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
         >
-          Cadastrar
+          <UserCheck size={20} />
+          <span>Finalizar Cadastro</span>
         </button>
       </form>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-200 via-orange-100 to-yellow-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 flex flex-col relative overflow-hidden">
+      
+      {/* Background Effects */}
+      <div className="absolute inset-0">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+        <div className="absolute top-40 right-8 w-24 h-24 bg-white/5 rounded-full blur-lg"></div>
+        <div className="absolute bottom-32 left-6 w-40 h-40 bg-purple-400/20 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-10 right-12 w-20 h-20 bg-blue-400/15 rounded-full blur-lg"></div>
+      </div>
+
       {/* Header Mobile */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-b-3xl shadow-lg">
+      <div className="relative z-10 text-white px-6 pt-12 pb-8">
         <div className="text-center">
-          <div className="mb-4">
+          <div className="mb-6 relative">
+            <div className="absolute inset-0 bg-white/20 rounded-full blur-lg transform scale-110"></div>
             <img 
               src={aventuriLogo} 
               alt="Logo XXVII Aventuri - AP Heróis de Jesus" 
-              className="w-20 h-20 mx-auto object-contain drop-shadow-lg"
+              className="relative w-24 h-24 mx-auto object-contain drop-shadow-xl"
             />
           </div>
-          <h1 className="text-lg font-bold mb-2">XXVII AVENTURI</h1>
-          <p className="text-sm opacity-90">AP HERÓIS DE JESUS</p>
-          <p className="text-xs opacity-75">26 a 28 de setembro de 2025 | Sumaré - SP</p>
+          <h1 className="text-2xl font-bold mb-2 tracking-wide">XXVII AVENTURI</h1>
+          <p className="text-lg opacity-90 font-medium">AP HERÓIS DE JESUS</p>
+          <p className="text-sm opacity-75 mt-2">26 a 28 de setembro de 2025 | Sumaré - SP</p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-6 max-w-md mx-auto mt-4">
+      <div className="flex-1 px-4 pb-8 relative z-10">
+        <div className="max-w-md mx-auto">
 
         {!selectedProfile ? (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Selecione seu perfil:</h2>
-            {profiles.map((profile) => (
-              <button
-                key={profile.id}
-                onClick={() => handleProfileSelect(profile.id)}
-                className={`w-full p-4 rounded-xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 text-left group hover:shadow-md`}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 ${profile.color} rounded-lg flex items-center justify-center text-white text-xl`}>
-                    {profile.icon}
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-bold text-white mb-2">Bem-vindo!</h2>
+              <p className="text-white/80 text-sm">Selecione seu perfil para começar</p>
+            </div>
+            
+            <div className="space-y-4">
+              {profiles.map((profile, index) => (
+                <button
+                  key={profile.id}
+                  onClick={() => handleProfileSelect(profile.id)}
+                  className={`w-full p-5 rounded-2xl bg-white/95 backdrop-blur-sm border border-white/20 hover:bg-white hover:scale-[1.02] transition-all duration-300 text-left group shadow-xl hover:shadow-2xl`}
+                  style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    animation: 'slideInUp 0.6s ease-out forwards'
+                  }}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-14 h-14 ${profile.color} rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      {profile.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 text-lg group-hover:text-gray-700 transition-colors">
+                        {profile.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">{profile.description}</p>
+                    </div>
+                    <div className="text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all">
+                      →
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-700">
-                      {profile.title}
-                    </h3>
-                    <p className="text-sm text-gray-600">{profile.description}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
+            
+            {/* Footer Info */}
+            <div className="text-center mt-8 pt-6">
+              <p className="text-white/60 text-xs">
+                Sistema de Pontuação Digital
+              </p>
+              <p className="text-white/40 text-xs mt-1">
+                Desenvolvido para o XXVII Aventuri
+              </p>
+            </div>
           </div>
         ) : (
-          <div>
-            <div className="flex items-center mb-6">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 p-6">
+            {/* Header da seleção */}
+            <div className="flex items-center mb-8">
               <button
                 onClick={resetForms}
-                className="text-gray-500 hover:text-gray-700 mr-4"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 mr-4 hover:scale-105"
               >
-                ← Voltar
+                <ArrowLeft size={18} />
               </button>
-              <h2 className="text-xl font-semibold text-gray-800">
-                {profiles.find(p => p.id === selectedProfile)?.title}
-              </h2>
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 ${profiles.find(p => p.id === selectedProfile)?.color} rounded-xl flex items-center justify-center text-white`}>
+                  {profiles.find(p => p.id === selectedProfile)?.icon}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {profiles.find(p => p.id === selectedProfile)?.title}
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    {profiles.find(p => p.id === selectedProfile)?.description}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {selectedProfile === "admin" && renderAdminLogin()}
-            {selectedProfile !== "admin" && !showRegisterForm && renderLoginForm()}
-            {selectedProfile !== "admin" && showRegisterForm && renderRegisterForm()}
+            <div className="space-y-6">
+              {selectedProfile === "admin" && renderAdminLogin()}
+              {selectedProfile !== "admin" && !showRegisterForm && renderLoginForm()}
+              {selectedProfile !== "admin" && showRegisterForm && renderRegisterForm()}
+            </div>
           </div>
         )}
         </div>
