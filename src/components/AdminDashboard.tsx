@@ -31,7 +31,8 @@ import {
   RotateCcw,
   MapPin,
   Award,
-  TrendingUp
+  TrendingUp,
+  User
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -65,6 +66,7 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
     const [lockingCriteria, setLockingCriteria] = useState(false);
     const [adminEditMode, setAdminEditMode] = useState(false);
     const [rankingRegion, setRankingRegion] = useState<string>("all");
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     console.log("AdminDashboard: About to call basic queries");
 
@@ -3215,50 +3217,123 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      {/* Header Fixo no Topo */}
+      <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 shadow-xl z-50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header Principal */}
           <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
-              <p className="text-gray-600">Bem-vindo, {user.name}</p>
+            <div className="flex items-center space-x-4">
+              <div className="bg-white/10 p-2 rounded-lg">
+                <Settings size={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">Painel Administrativo</h1>
+                <h2 className="text-indigo-100 text-base mt-1 font-semibold">
+                  Bem-vindo, {user.name || 'Administrador'}
+                </h2>
+              </div>
             </div>
-            <button
-              onClick={onLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
-            >
-              <DoorOpen size={16} />
-              Sair
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+            
+            {/* Menu do Usuário */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-3 border border-white/20 backdrop-blur-sm"
               >
-                <span>{tab.icon}</span>
-                <span>{tab.name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold">
+                      {(user.name || 'Admin').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-left hidden sm:block">
+                    <p className="text-sm font-medium">{user.name || 'Administrador'}</p>
+                    <p className="text-xs text-indigo-200">Admin</p>
+                  </div>
+                </div>
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20"
+                >
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </button>
-            ))}
+              
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-in slide-in-from-top-2 duration-200">
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <User size={20} className="text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{user.name || 'Administrador'}</p>
+                        <p className="text-sm text-gray-500">Admin do Sistema</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="py-2">
+                    <button
+                      onClick={() => setShowUserMenu(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <User size={16} />
+                      Meu Perfil
+                    </button>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onLogout();
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                    >
+                      <DoorOpen size={16} />
+                      Sair do Sistema
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Overlay para fechar o menu */}
+              {showUserMenu && (
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowUserMenu(false)}
+                />
+              )}
+            </div>
+          </div>
+          
+          {/* Navigation Tabs */}
+          <div className="border-t border-white/10 mt-2">
+            <div className="flex space-x-0 overflow-x-auto scrollbar-hide -mb-px">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 py-3 px-4 font-medium text-sm whitespace-nowrap transition-all duration-200 min-w-max ${
+                    activeTab === tab.id
+                      ? "bg-white text-indigo-700 border-b-2 border-indigo-600 -mb-px"
+                      : "text-indigo-100 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <span className={activeTab === tab.id ? "text-indigo-600" : "text-current"}>{tab.icon}</span>
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
+      {/* Main Content com espaço para header fixo */}
+      <div className="pt-32 sm:pt-36 md:pt-40 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

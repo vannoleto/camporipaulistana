@@ -12,7 +12,8 @@ import {
   Target,
   Building2,
   DoorOpen,
-  CheckCircle
+  CheckCircle,
+  User
 } from "lucide-react";
 
 interface RegionalDashboardProps {
@@ -57,13 +58,6 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
       club.classification?.toLowerCase().includes(searchLower)
     );
   });
-
-  const tabs = [
-    { id: "overview", name: "Visão Geral", icon: <BarChart3 size={20} /> },
-    { id: "clubs", name: "Clubes da Região", icon: <Trophy size={20} /> },
-    { id: "ranking", name: "Ranking Regional", icon: <Trophy size={20} /> },
-    { id: "comparison", name: "Comparação", icon: <TrendingUp size={20} /> },
-  ];
 
   const renderOverview = () => (
     <div className="space-y-6">
@@ -509,58 +503,110 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
     }
   };
 
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const tabs = [
+    { id: "overview", name: "Visão Geral", icon: <BarChart3 size={20} /> },
+    { id: "clubs", name: "Clubes", icon: <Building2 size={20} /> },
+    { id: "ranking", name: "Ranking", icon: <Trophy size={20} /> },
+    { id: "reports", name: "Relatórios", icon: <Target size={20} /> },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="text-blue-500">
-                <Globe size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Painel Regional - {user.region}</h1>
-                <p className="text-sm text-gray-600">Bem-vindo, {user.name}</p>
-              </div>
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header Mobile */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/10 p-2 rounded-lg">
+              <Globe size={24} className="text-white" />
             </div>
-            <button
-              onClick={onLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
-            >
-              <DoorOpen size={16} />
-              Sair
-            </button>
+            <div>
+              <h2 className="text-lg font-bold">
+                Bem-vindo, {user.name || 'Regional'}
+              </h2>
+              <p className="text-xs text-indigo-200">
+                Regional
+              </p>
+              <p className="text-xs text-indigo-200">
+                Região: {user.region}
+              </p>
+            </div>
           </div>
+          
+          {/* Botão de usuário simplificado */}
+          <button 
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative"
+          >
+            <User className="w-5 h-5 text-white" />
+            
+            {/* Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                <div className="p-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <Globe size={16} className="text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{user.name || 'Regional'}</p>
+                      <p className="text-xs text-gray-500">Regional - {user.region}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="py-2">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
+                    <DoorOpen size={16} />
+                    Sair do Sistema
+                  </button>
+                </div>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Overlay para fechar o menu */}
+        {showUserMenu && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowUserMenu(false)}
+          />
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="p-4">
+          {renderContent()}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="lg:w-64">
-            <nav className="space-y-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-blue-500 text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-xl">{tab.icon}</span>
-                  <span className="font-medium">{tab.name}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            {renderContent()}
-          </div>
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div className="flex justify-around py-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center py-2 px-3 transition-all duration-200 ${
+                activeTab === tab.id
+                  ? "text-indigo-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <span className={activeTab === tab.id ? "text-indigo-600" : "text-current"}>
+                {tab.icon}
+              </span>
+              <span className="text-xs mt-1 font-medium">{tab.name}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

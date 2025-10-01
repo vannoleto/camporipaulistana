@@ -32,36 +32,14 @@ function App() {
   const renderDashboard = () => {
     switch (user.role) {
       case "admin":
-        return (
-          <MobileLayout user={user} onLogout={handleLogout}>
-            <AdminDashboard user={user} onLogout={handleLogout} />
-          </MobileLayout>
-        );
+        return <AdminDashboard user={user} onLogout={handleLogout} />;
       case "director":
       case "secretary":
-        return (
-          <MobileLayout user={user} onLogout={handleLogout}>
-            {(activeTab: string) => (
-              <DirectorDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
-            )}
-          </MobileLayout>
-        );
+        return <DirectorDashboard user={user} onLogout={handleLogout} />;
       case "regional":
-        return (
-          <MobileLayout user={user} onLogout={handleLogout}>
-            {(activeTab: string) => (
-              <RegionalDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
-            )}
-          </MobileLayout>
-        );
+        return <RegionalDashboard user={user} onLogout={handleLogout} />;
       case "staff":
-        return (
-          <MobileLayout user={user} onLogout={handleLogout}>
-            {(activeTab: string) => (
-              <StaffDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
-            )}
-          </MobileLayout>
-        );
+        return <StaffDashboard user={user} onLogout={handleLogout} />;
       default:
         return <div className="p-4 text-center">Tipo de usuário não reconhecido</div>;
     }

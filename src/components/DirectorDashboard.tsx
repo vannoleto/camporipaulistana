@@ -221,6 +221,10 @@ function QRCodeDisplay({ club }: { club: any }) {
 
 export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab }: DirectorDashboardProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("home");
+  
+  // Usar activeTab interno para controle local
+  const activeTab = internalActiveTab;
+  const setActiveTab = setInternalActiveTab;
 
   // Removido showQRCode e showQRModal - QR code agora é mostrado diretamente na aba
 
@@ -1143,12 +1147,120 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     }
   };
 
-  // Retornar apenas o conteúdo atual baseado na aba ativa
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const tabs = [
+    { id: "home", name: "Início", icon: <Home size={20} /> },
+    { id: "club", name: "Clube", icon: <Users size={20} /> },
+    { id: "qrcode", name: "QR Code", icon: <QrCode size={20} /> },
+    { id: "reports", name: "Relatórios", icon: <BarChart3 size={20} /> },
+    { id: "profile", name: "Histórico", icon: <Clock size={20} /> },
+  ];
+
   return (
-    <>
-      {renderContent()}
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header Mobile */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/10 p-2 rounded-lg">
+              <Building2 size={24} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">
+                Bem-vindo, {user.name || 'Diretor'}
+              </h2>
+              <p className="text-xs text-indigo-200">
+                {user.role === 'director' ? 'Diretor' : 'Secretário'}
+              </p>
+              {userClub && (
+                <>
+                  <p className="text-xs text-indigo-200">
+                    {userClub.name} | {userClub.region}
+                  </p>
+                  <p className="text-xs text-indigo-200">
+                    {userClub.membersCount || 0} membros
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Botão de usuário simplificado */}
+          <button 
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center relative"
+          >
+            <User className="w-5 h-5 text-white" />
+            
+            {/* Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                <div className="p-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <User size={16} className="text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{user.name || 'Diretor'}</p>
+                      <p className="text-xs text-gray-500">{user.role === 'director' ? 'Diretor' : 'Secretário'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="py-2">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  >
+                    <DoorOpen size={16} />
+                    Sair do Sistema
+                  </button>
+                </div>
+              </div>
+            )}
+          </button>
+        </div>
 
+        {/* Overlay para fechar o menu */}
+        {showUserMenu && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowUserMenu(false)}
+          />
+        )}
+      </div>
 
-    </>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="p-4">
+          {renderContent()}
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div className="flex justify-around py-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center py-2 px-3 transition-all duration-200 ${
+                activeTab === tab.id
+                  ? "text-indigo-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <span className={activeTab === tab.id ? "text-indigo-600" : "text-current"}>
+                {tab.icon}
+              </span>
+              <span className="text-xs mt-1 font-medium">{tab.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

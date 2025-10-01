@@ -6,7 +6,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
-    basicSsl(),
+    // basicSsl(), // Desabilitado para desenvolvimento local
     react(),
     // The code below enables dev tools like taking screenshots of your site
     // while it is being developed on chef.convex.dev.
