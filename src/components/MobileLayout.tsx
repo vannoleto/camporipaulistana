@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Home, Search, User, Menu as MenuIcon, BarChart3, Users, QrCode, Settings, X } from 'lucide-react';
+import { Home, Search, User, Menu as MenuIcon, BarChart3, Users, QrCode, Settings, X, Clock, History } from 'lucide-react';
 
 interface MobileLayoutProps {
   user: any;
   onLogout: () => void;
-  children: React.ReactNode;
+  children: React.ReactNode | ((activeTab: string) => React.ReactNode);
 }
 
 export function MobileLayout({ user, onLogout, children }: MobileLayoutProps) {
@@ -63,8 +63,8 @@ export function MobileLayout({ user, onLogout, children }: MobileLayoutProps) {
           },
           {
             id: 'profile',
-            label: 'Perfil',
-            icon: <User size={24} />,
+            label: 'Histórico',
+            icon: <History size={24} />,
           }
         ];
       
@@ -158,7 +158,7 @@ export function MobileLayout({ user, onLogout, children }: MobileLayoutProps) {
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto pb-20">
-        {children}
+        {typeof children === 'function' ? children(activeTab) : children}
       </div>
 
       {/* Bottom Navigation */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
-import { ClubQRCode } from "./ClubQRCode";
+import QRCodeLib from 'qrcode';
 import { 
   BarChart3, 
   ClipboardList, 
@@ -48,6 +48,8 @@ import {
   XCircle,
   Volume2,
   DoorClosed,
+  Download,
+  Copy,
   Zap,
   Car
 } from "lucide-react";
@@ -58,20 +60,169 @@ interface DirectorDashboardProps {
   activeTab?: string; // Aba ativa vinda do MobileLayout
 }
 
+// Componente para exibir QR Code inline sem modal
+function QRCodeDisplay({ club }: { club: any }) {
+  const [qrCodeDataURL, setQrCodeDataURL] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(true);
+
+  // Dados únicos do clube para o QR Code
+  const clubData = {
+    id: club._id,
+    name: club.name,
+    region: club.region,
+    director: club.director,
+    secretary: club.secretary,
+    members: club.membersCount || club.members || 0,
+    timestamp: Date.now(),
+    hash: generateClubHash(club)
+  };
+
+  const qrCodeContent = JSON.stringify(clubData);
+
+  useEffect(() => {
+    generateQRCode();
+  }, []);
+
+  function generateClubHash(club: any): string {
+    const data = `${club._id}-${club.name}-${club.region}-${Date.now()}`;
+    return btoa(data).slice(0, 16);
+  }
+
+  async function generateQRCode() {
+    try {
+      setIsGenerating(true);
+      
+      const qrOptions = {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#1F2937',
+          light: '#FFFFFF'
+        },
+        errorCorrectionLevel: 'H' as const,
+      };
+
+      const dataURL = await QRCodeLib.toDataURL(qrCodeContent, qrOptions);
+      setQrCodeDataURL(dataURL);
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  const handleCopyData = async () => {
+    try {
+      await navigator.clipboard.writeText(qrCodeContent);
+      toast.success('Dados do QR Code copiados!');
+    } catch (error) {
+      toast.error('Erro ao copiar dados');
+    }
+  };
+
+  const handleDownload = () => {
+    if (qrCodeDataURL) {
+      const link = document.createElement('a');
+      link.download = `qrcode-${club.name}.png`;
+      link.href = qrCodeDataURL;
+      link.click();
+    }
+  };
+
+  if (isGenerating) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+        <p className="text-gray-600">Gerando QR Code...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* QR Code */}
+      <div className="flex justify-center">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+          <div className="text-center mb-4">
+            <h3 className="font-bold text-lg text-gray-800">{club.name}</h3>
+            <p className="text-sm text-gray-600">{club.region}</p>
+          </div>
+          
+          {qrCodeDataURL && (
+            <img 
+              src={qrCodeDataURL} 
+              alt={`QR Code do clube ${club.name}`}
+              className="mx-auto rounded-lg"
+              style={{ maxWidth: '300px', width: '100%' }}
+            />
+          )}
+          
+          <p className="text-xs text-gray-500 text-center mt-4">
+            Mostre este QR Code para o staff fazer a avaliação
+          </p>
+        </div>
+      </div>
+
+      {/* Informações do clube */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <Users size={18} />
+          Informações do Clube
+        </h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-gray-600">Nome:</span>
+            <p className="font-medium">{club.name}</p>
+          </div>
+          <div>
+            <span className="text-gray-600">Região:</span>
+            <p className="font-medium">{club.region}</p>
+          </div>
+          {club.director && (
+            <div>
+              <span className="text-gray-600">Diretor:</span>
+              <p className="font-medium">{club.director}</p>
+            </div>
+          )}
+          {club.secretary && (
+            <div>
+              <span className="text-gray-600">Secretário:</span>
+              <p className="font-medium">{club.secretary}</p>
+            </div>
+          )}
+          <div>
+            <span className="text-gray-600">Membros:</span>
+            <p className="font-medium">{club.membersCount || club.members || 0}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Botões de ação */}
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={handleDownload}
+          className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+        >
+          <Download size={16} />
+          Baixar
+        </button>
+        
+        <button
+          onClick={handleCopyData}
+          className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors"
+        >
+          <Copy size={16} />
+          Copiar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab }: DirectorDashboardProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("home");
 
-  // Estado para o QR Code
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);  // Listener para o botão QR Code da navegação
-  useEffect(() => {
-    const handleShowQRCode = () => {
-      setShowQRCode(true);
-    };
-
-    window.addEventListener('showQRCode', handleShowQRCode);
-    return () => window.removeEventListener('showQRCode', handleShowQRCode);
-  }, []);
+  // Removido showQRCode e showQRModal - QR code agora é mostrado diretamente na aba
 
   // Buscar dados do clube do usuário
   const userClub = useQuery(api.clubs.getClubById, { clubId: user.clubId });
@@ -331,42 +482,48 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     );
   };
 
-  const renderQRCodeInfo = () => (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold text-center text-gray-800">QR Code dos Clubes</h2>
-      
-      <div className="text-center space-y-4">
-        <p className="text-gray-600">
-          Use o botão abaixo para gerar e visualizar os códigos QR únicos de cada clube.
-        </p>
-        
-        <button
-          onClick={() => setShowQRModal(true)}
-          className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors font-semibold shadow-md"
-        >
-          Ver QR Codes dos Clubes
-        </button>
-      </div>
-
-      {clubs && clubs.length > 0 && (
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="font-semibold mb-3">Clubes Disponíveis:</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {clubs.map(club => (
-              <div key={club._id} className="bg-white p-3 rounded border">
-                <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-4 h-4 rounded-full bg-blue-500"
-                  />
-                  <span className="font-medium">{club.name}</span>
-                </div>
-              </div>
-            ))}
+  const renderQRCodeInfo = () => {
+    if (!userClub) {
+      return (
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <Building2 size={48} className="text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">Clube não encontrado</p>
+            </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      );
+    }
+
+    return (
+      <div className="p-6 space-y-6">
+        <h2 className="text-2xl font-bold text-center text-gray-800">QR Code do Clube</h2>
+        
+        <div className="text-center space-y-4">
+          <p className="text-gray-600">
+            QR Code único do clube <strong>{userClub.name}</strong>
+          </p>
+          <p className="text-sm text-gray-500">
+            Mostre este código para o staff durante as avaliações
+          </p>
+        </div>
+
+        {/* QR Code Inline - Integrado diretamente na página */}
+        <QRCodeDisplay club={userClub} />
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-800 mb-2">💡 Como usar:</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• QR code gerado automaticamente para seu clube</li>
+            <li>• Mostre este código para o staff durante avaliações</li>
+            <li>• O QR code é válido por 24 horas</li>
+            <li>• Código único e seguro para seu clube</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
 
   const renderOverview = () => {
     if (!userClub) {
@@ -978,10 +1135,10 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     const currentTab = externalActiveTab || internalActiveTab;
     switch (currentTab) {
       case "home": return renderHome();
-      case "overview": return renderOverview();
+      case "club": return renderOverview();
       case "qrcode": return renderQRCodeInfo();
-      case "scoring": return renderScoring();
-      case "history": return renderHistory();
+      case "reports": return renderScoring();
+      case "profile": return renderHistory();
       default: return renderHome();
     }
   };
@@ -990,40 +1147,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
   return (
     <>
       {renderContent()}
-      
-      {/* Modal QR Code */}
-      {showQRCode && userClub && (
-        <ClubQRCode 
-          club={userClub} 
-          onClose={() => setShowQRCode(false)} 
-        />
-      )}
 
-      {/* Modal para visualizar todos os QR Codes */}
-      {showQRModal && clubs && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">QR Codes dos Clubes</h3>
-              <button
-                onClick={() => setShowQRModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-4">
-              {clubs.map(club => (
-                <ClubQRCode 
-                  key={club._id}
-                  club={club} 
-                  onClose={() => {}}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }

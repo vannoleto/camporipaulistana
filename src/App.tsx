@@ -41,19 +41,25 @@ function App() {
       case "secretary":
         return (
           <MobileLayout user={user} onLogout={handleLogout}>
-            <DirectorDashboard user={user} onLogout={handleLogout} />
+            {(activeTab: string) => (
+              <DirectorDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
+            )}
           </MobileLayout>
         );
       case "regional":
         return (
           <MobileLayout user={user} onLogout={handleLogout}>
-            <RegionalDashboard user={user} onLogout={handleLogout} />
+            {(activeTab: string) => (
+              <RegionalDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
+            )}
           </MobileLayout>
         );
       case "staff":
         return (
           <MobileLayout user={user} onLogout={handleLogout}>
-            <StaffDashboard user={user} onLogout={handleLogout} />
+            {(activeTab: string) => (
+              <StaffDashboard user={user} onLogout={handleLogout} activeTab={activeTab} />
+            )}
           </MobileLayout>
         );
       default:
