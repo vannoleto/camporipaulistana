@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
@@ -43,6 +43,10 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     api.clubs.getClubById, 
     selectedClub ? { clubId: selectedClub._id } : "skip"
   );
+  const lockedCriteriaData = useQuery(
+    api.clubs.getLockedCriteria,
+    selectedClub ? { clubId: selectedClub._id } : "skip"
+  );
   const updateClubScores = useMutation(api.clubs.updateClubScores);
 
   // Criar estrutura completa de scores AUTOMATICAMENTE a partir dos critérios do Convex
@@ -83,8 +87,33 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   const initializeScores = (club: any) => {
     setSelectedClub(club);
     setScores(createCompleteScoresStructure(club.scores, scoringCriteria));
+    
+    // Carregar critérios travados do banco de dados
+    // Será atualizado quando lockedCriteriaData carregar
     setLockedCriteria(new Set());
   };
+
+  // Effect para atualizar lockedCriteria quando os dados carregarem
+  useEffect(() => {
+    if (lockedCriteriaData && lockedCriteriaData.length > 0) {
+      const locked = new Set<string>();
+      console.log("🔒 Dados brutos do banco:", lockedCriteriaData);
+      
+      lockedCriteriaData.forEach((item: any) => {
+        // Se tem subKey, usar criteriaKey.subKey, senão apenas criteriaKey
+        const key = item.subKey 
+          ? `${item.category}.${item.criteriaKey}.${item.subKey}`
+          : `${item.category}.${item.criteriaKey}`;
+        locked.add(key);
+        console.log(`🔒 Adicionando ao Set: "${key}" (category: ${item.category}, criteriaKey: ${item.criteriaKey}, subKey: ${item.subKey || 'N/A'})`);
+      });
+      
+      setLockedCriteria(locked);
+      console.log("🔒 Set final de critérios travados:", Array.from(locked));
+    } else {
+      console.log("⚠️ Nenhum critério travado encontrado ou dados não carregados ainda");
+    }
+  }, [lockedCriteriaData]);
 
   const handleScoreChange = (category: string, key: string, value: number) => {
     setScores((prev: any) => ({
@@ -117,7 +146,11 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
 
   // Verificar se um critério está travado
   const isCriteriaLocked = (category: string, key: string): boolean => {
-    return lockedCriteria.has(`${category}.${key}`);
+    const criteriaKey = `${category}.${key}`;
+    const isLocked = lockedCriteria.has(criteriaKey);
+    console.log(`🔍 Verificando lock: "${criteriaKey}" => ${isLocked ? '✅ TRAVADO' : '❌ LIBERADO'}`);
+    console.log(`🔍 Set atual:`, Array.from(lockedCriteria));
+    return isLocked;
   };
 
   const handleSave = async () => {
@@ -126,10 +159,39 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
       return;
     }
 
+    // Filtrar apenas os scores que foram avaliados (locked)
+    const evaluatedScores: any = {};
+    
+    lockedCriteria.forEach(criteriaKey => {
+      const [category, key] = criteriaKey.split('.');
+      
+      if (!evaluatedScores[category]) {
+        evaluatedScores[category] = {};
+      }
+      
+      evaluatedScores[category][key] = scores[category]?.[key] || 0;
+    });
+
+    // Remover categorias vazias
+    Object.keys(evaluatedScores).forEach(category => {
+      if (Object.keys(evaluatedScores[category]).length === 0) {
+        delete evaluatedScores[category];
+      }
+    });
+
+    console.log("Salvando apenas critérios avaliados:", evaluatedScores);
+    console.log("Categorias:", Object.keys(evaluatedScores));
+    console.log("Total de critérios avaliados:", lockedCriteria.size);
+
+    if (Object.keys(evaluatedScores).length === 0) {
+      toast.error("Nenhum critério foi avaliado");
+      return;
+    }
+
     try {
       await updateClubScores({
         clubId: selectedClub._id,
-        scores: scores,
+        scores: evaluatedScores, // Enviar APENAS os avaliados
         userId: user._id,
       });
       toast.success("Avaliação salva com sucesso!");
@@ -143,24 +205,68 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   };
 
   // Função para calcular pontuação total
-  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
+  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios AVALIADOS
+  // Lógica: Se ganhou máximo → perde 0 | Se ganhou parcial → perde (max-parcial) | Se ganhou zero → perde max
   const calculateTotalScore = (clubScores: any) => {
-    if (!clubScores) return 1910; // Pontuação máxima inicial
+    if (!clubScores || !scoringCriteria) return 1910; // Pontuação máxima inicial
 
     const MAX_SCORE = 1910;
-    let penalties = 0;
+    let totalPenalty = 0;
 
-    // Calcular penalidades (pontos perdidos) por cada categoria
-    Object.values(clubScores).forEach((category: any) => {
-      if (typeof category === 'object') {
-        Object.values(category).forEach((value: any) => {
-          penalties += Math.abs(value || 0);
-        });
-      }
+    console.log("=== CÁLCULO DE PONTUAÇÃO ===");
+    console.log("Scores do clube:", clubScores);
+    console.log("Critérios locked:", Array.from(lockedCriteria));
+
+    // Iterar por todas as categorias
+    Object.keys(clubScores).forEach(category => {
+      if (!scoringCriteria[category]) return;
+
+      Object.keys(clubScores[category]).forEach(key => {
+        // IMPORTANTE: Só calcular penalidade se o critério foi AVALIADO (locked)
+        const criteriaKey = `${category}.${key}`;
+        if (!lockedCriteria.has(criteriaKey)) {
+          console.log(`⊘ ${category}.${key}: NÃO AVALIADO (ignorado)`);
+          return; // Critério não avaliado = não desconta nada
+        }
+
+        const earnedPoints = clubScores[category][key] || 0;
+        const criterion = scoringCriteria[category][key];
+        
+        if (!criterion) return;
+
+        const maxPoints = criterion.max || 0;
+        const partialPoints = criterion.partial || 0;
+
+        // Calcular penalidade baseado no que foi conquistado
+        let penalty = 0;
+
+        if (earnedPoints === maxPoints) {
+          // Ganhou pontuação máxima → Não perde nada
+          penalty = 0;
+          console.log(`✓ ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} → Penalidade: 0`);
+        } else if (earnedPoints === partialPoints && partialPoints > 0) {
+          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
+          penalty = maxPoints - partialPoints;
+          console.log(`⚠ ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} (parcial) → Penalidade: ${penalty}`);
+        } else if (earnedPoints === 0) {
+          // Ganhou zero → Perde tudo (max)
+          penalty = maxPoints;
+          console.log(`✗ ${criterion.description}: Ganhou 0/${maxPoints} → Penalidade: ${penalty}`);
+        } else {
+          // Caso customizado: perde a diferença entre max e o que ganhou
+          penalty = maxPoints - earnedPoints;
+          console.log(`? ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} → Penalidade: ${penalty}`);
+        }
+
+        totalPenalty += penalty;
+      });
     });
 
-    // Pontuação final = Máximo - Penalidades
-    return Math.max(0, MAX_SCORE - penalties);
+    console.log(`TOTAL DE PENALIDADES: ${totalPenalty}`);
+    console.log(`PONTUAÇÃO FINAL: ${MAX_SCORE} - ${totalPenalty} = ${MAX_SCORE - totalPenalty}`);
+
+    // Pontuação final = Máximo - Penalidades totais
+    return Math.max(0, MAX_SCORE - totalPenalty);
   };
 
   // Função para calcular classificação
@@ -347,11 +453,16 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center py-4 bg-green-100 rounded-lg">
-                            <CheckCircle size={20} className="text-green-600 mr-2" />
-                            <span className="text-green-700 font-semibold text-sm">
-                              Critério já avaliado
-                            </span>
+                          <div className="bg-green-100 border border-green-300 rounded-lg p-3">
+                            <div className="flex items-center justify-center mb-2">
+                              <CheckCircle size={20} className="text-green-600 mr-2" />
+                              <span className="text-green-700 font-semibold text-sm">
+                                Critério já avaliado
+                              </span>
+                            </div>
+                            <p className="text-xs text-green-800 text-center">
+                              Apenas administradores podem editar critérios já avaliados
+                            </p>
                           </div>
                         )}
                       </div>

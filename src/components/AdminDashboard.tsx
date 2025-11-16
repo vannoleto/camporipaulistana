@@ -233,69 +233,53 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   // Função para calcular pontuação total baseada na estrutura de pontuações
   // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
   const calculateTotalScore = (scores: any) => {
-    if (!scores) return 1910; // Pontuação máxima inicial
+    if (!scores || !scoringCriteria) return 1910; // Pontuação máxima inicial
 
     const MAX_SCORE = 1910;
-    let penalties = 0;
+    let totalPenalty = 0;
 
-    // Calcular penalidades (pontos perdidos) por cada categoria
-    if (scores.prerequisites) {
-      Object.values(scores.prerequisites).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+    // Calcular penalidades baseado nos critérios dinâmicos
+    Object.keys(scores).forEach(category => {
+      if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
+
+      const categoryScores = scores[category];
+      if (typeof categoryScores !== 'object') return;
+
+      Object.keys(categoryScores).forEach(key => {
+        const earnedPoints = categoryScores[key];
+        if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
+
+        const criterion = scoringCriteria[category]?.[key];
+        if (!criterion) return; // Ignorar critérios não definidos
+
+        const maxPoints = criterion.max || 0;
+        const partialPoints = criterion.partial || 0;
+
+        // Calcular penalidade baseado no que foi conquistado
+        let penalty = 0;
+
+        if (earnedPoints === maxPoints) {
+          // Ganhou pontuação máxima → Não perde nada
+          penalty = 0;
+        } else if (earnedPoints === partialPoints && partialPoints > 0) {
+          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
+          penalty = maxPoints - partialPoints;
+        } else if (earnedPoints === 0) {
+          // Ganhou zero → Perde tudo (max)
+          penalty = maxPoints;
+        } else {
+          // Caso customizado: perde a diferença entre max e o que ganhou
+          penalty = maxPoints - earnedPoints;
+        }
+
+        totalPenalty += penalty;
       });
-    }
+    });
 
-    if (scores.campground) {
-      Object.values(scores.campground).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.kitchen) {
-      Object.values(scores.kitchen).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.participation) {
-      Object.values(scores.participation).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.uniform) {
-      Object.values(scores.uniform).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.secretary) {
-      Object.values(scores.secretary).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.events) {
-      Object.values(scores.events).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    if (scores.bonus) {
-      Object.values(scores.bonus).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    // Deméritos são penalidades adicionais
-    if (scores.demerits) {
-      Object.values(scores.demerits).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
-      });
-    }
-
-    // Pontuação final = Máximo - Penalidades
-    return Math.max(0, MAX_SCORE - penalties);
+    // Pontuação final = Máximo (1910) - Penalidades totais
+    const finalScore = Math.max(0, MAX_SCORE - totalPenalty);
+    console.log(`📊 Admin calculateTotalScore: Penalidade Total=${totalPenalty}, Final=${finalScore}`);
+    return finalScore;
   };
 
   const getClassification = (totalScore: number): string => {
@@ -307,6 +291,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
 
   const updateScore = (category: string, subcategory: string, value: any) => {
+    console.log("📝 AdminDashboard.updateScore called:", { category, subcategory, value });
+    
     const actualValue = typeof value === 'string' ? parseInt(value) : value;
     // Validar que pontuações não podem ser negativas (exceto para deméritos que são valores positivos representando penalidades)
     if (actualValue < 0 && category !== "demerits") {
@@ -338,13 +324,23 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
     const newScores = { ...editingScores };
     
+    // Garantir que a categoria existe
+    if (!newScores[category]) {
+      newScores[category] = {};
+    }
+    
     if (subcategory.includes('.')) {
       const [subcat, item] = subcategory.split('.');
+      // Garantir que o subcategory existe
+      if (!newScores[category][subcat]) {
+        newScores[category][subcat] = {};
+      }
       newScores[category][subcat][item] = actualValue;
     } else {
       newScores[category][subcategory] = actualValue;
     }
     
+    console.log("📝 editingScores atualizado:", newScores);
     setEditingScores(newScores);
   };
 
@@ -565,9 +561,13 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   };
 
   const handleSaveScores = async () => {
+    console.log("🎯 handleSaveScores INICIADO", { selectedClub, editingScores });
+    
     if (!selectedClub || !editingScores) return;
     
     try {
+      console.log("AdminDashboard: Saving scores", { clubId: selectedClub._id, editingScores });
+      
       // Atualizar pontuações do clube
       await updateClubScores({
         clubId: selectedClub._id,
@@ -575,27 +575,90 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         userId: user._id,
       });
 
-      // Marcar apenas os critérios que foram realmente modificados
-      await lockModifiedCriteria(selectedClub._id, editingScores);
+      // Travar todos os critérios com pontuação > 0 que ainda não estão travados
+      await lockAllEvaluatedCriteria(selectedClub._id, editingScores);
       
       toast.success("Pontuações salvas com sucesso!");
       setEditingScores(null);
       setSelectedClub(null); // Volta para a lista de clubes
+      setActiveTab("clubs");
     } catch (error: any) {
+      console.error("AdminDashboard: Error saving scores", error);
       toast.error(error.message);
     }
   };
 
+  // Nova função: trava TODOS os critérios com pontuação > 0
+  const lockAllEvaluatedCriteria = async (clubId: string, scores: any) => {
+    const lockPromises: Promise<any>[] = [];
+
+    const lockCategory = (category: string, categoryScores: any, parentKey?: string) => {
+      if (!categoryScores) return;
+      
+      for (const [key, value] of Object.entries(categoryScores)) {
+        // PRIMEIRO: verificar se é número válido para travar
+        if (typeof value === 'number' && value > 0) {
+          const criteriaKey = parentKey || key;
+          const subKey = parentKey ? key : undefined;
+          
+          console.log("🔐 AdminDashboard: Preparando lock", {
+            category,
+            criteriaKey,
+            subKey,
+            fullPath: subKey ? `${category}.${criteriaKey}.${subKey}` : `${category}.${criteriaKey}`,
+            score: value
+          });
+          
+          lockPromises.push(
+            lockCriteria({
+              clubId: clubId as any,
+              category: category,
+              criteriaKey: criteriaKey,
+              subKey: subKey,
+              score: value as number,
+              evaluatedBy: user._id,
+            })
+          );
+        } 
+        // SEGUNDO: se é objeto, fazer recursão
+        else if (typeof value === 'object' && value !== null) {
+          lockCategory(category, value, key);
+        }
+      }
+    };
+
+    // Travar todas as categorias (exceto deméritos)
+    if (scores.prerequisites) lockCategory("prerequisites", scores.prerequisites);
+    if (scores.campground) lockCategory("campground", scores.campground);
+    if (scores.kitchen) lockCategory("kitchen", scores.kitchen);
+    if (scores.participation) lockCategory("participation", scores.participation);
+    if (scores.uniform) lockCategory("uniform", scores.uniform);
+    if (scores.secretary) lockCategory("secretary", scores.secretary);
+    if (scores.events) lockCategory("events", scores.events);
+    if (scores.bonus) lockCategory("bonus", scores.bonus);
+
+    await Promise.all(lockPromises);
+    console.log("AdminDashboard: Locked", lockPromises.length, "criteria");
+  };
+
   const lockModifiedCriteria = async (clubId: string, newScores: any) => {
-    if (!selectedClubData?.scores) return;
+    if (!selectedClubData?.scores) {
+      console.log("AdminDashboard: No original scores found, locking all evaluated criteria");
+      // Se não há scores originais, trava todos os critérios com valor > 0
+      await lockAllEvaluatedCriteria(clubId, newScores);
+      return;
+    }
     
     const originalScores = selectedClubData.scores;
     const lockPromises: Promise<any>[] = [];
 
     // Comparar e travar apenas critérios modificados
-    const compareAndLock = (category: string, originalCat: any, newCat: any, parentKey?: string) => {
+    const compareAndLock = (category: string, originalCat: any = {}, newCat: any = {}, parentKey?: string) => {
+      // Verificar se newCat é válido
+      if (!newCat || typeof newCat !== 'object') return;
+      
       for (const [key, newValue] of Object.entries(newCat)) {
-        const originalValue = originalCat[key];
+        const originalValue = originalCat?.[key];
         
         // Para objetos aninhados como carousel
         if (typeof newValue === 'object' && newValue !== null) {
@@ -638,7 +701,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     compareAndLock("events", originalScores.events, newScores.events);
     compareAndLock("bonus", originalScores.bonus, newScores.bonus);
     // ❌ DEMÉRITOS NÃO SÃO TRAVADOS - podem ocorrer múltiplas vezes durante o evento
-    // compareAndLock("demerits", originalScores.demerits, newScores.demerits);
 
     await Promise.all(lockPromises);
   };

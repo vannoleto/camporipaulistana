@@ -116,58 +116,66 @@ const createInitialScoreStructure = (criteria: any) => {
 };
 
 // Função para calcular pontuação total
-const calculateTotalScore = (scores: any) => {
+const calculateTotalScore = (scores: any, criteria?: any) => {
   if (!scores) return 1910; // Pontuação máxima inicial do Campori
 
   const MAX_SCORE = 1910;
-  let penalties = 0;
+  let totalPenalty = 0;
 
-  // Calcular penalidades (pontos perdidos) por cada categoria
-  if (scores.prerequisites) {
-    Object.values(scores.prerequisites).forEach((value: any) => {
-      penalties += Math.abs(value || 0);
-    });
-  }
-
-  if (scores.participation) {
-    Object.values(scores.participation).forEach((value: any) => {
-      penalties += Math.abs(value || 0);
-    });
-  }
-
-  if (scores.general) {
-    Object.values(scores.general).forEach((value: any) => {
-      penalties += Math.abs(value || 0);
-    });
-  }
-
-  if (scores.events) {
-    Object.entries(scores.events).forEach(([key, value]: [string, any]) => {
-      if (key === 'carousel') {
-        Object.values(value).forEach((carouselValue: any) => {
-          penalties += Math.abs(carouselValue || 0);
+  // Se não tiver critérios, usar cálculo legacy (compatibilidade)
+  if (!criteria) {
+    Object.values(scores).forEach((category: any) => {
+      if (typeof category === 'object') {
+        Object.values(category).forEach((value: any) => {
+          if (typeof value === 'number') {
+            totalPenalty += Math.abs(value || 0);
+          }
         });
-      } else {
-        penalties += Math.abs(value || 0);
       }
     });
+    return Math.max(0, MAX_SCORE - totalPenalty);
   }
 
-  if (scores.bonus) {
-    Object.values(scores.bonus).forEach((value: any) => {
-      penalties += Math.abs(value || 0);
+  // Cálculo dinâmico baseado nos critérios (novo sistema)
+  Object.keys(scores).forEach(category => {
+    if (!criteria[category]) return; // Ignorar categorias sem critérios
+
+    Object.keys(scores[category]).forEach(key => {
+      const earnedPoints = scores[category][key] || 0;
+      const criterion = criteria[category][key];
+      
+      if (!criterion) return; // Ignorar critérios não definidos
+      if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
+
+      const maxPoints = criterion.max || 0;
+      const partialPoints = criterion.partial || 0;
+
+      // Calcular penalidade baseado no que foi conquistado
+      let penalty = 0;
+
+      if (earnedPoints === maxPoints) {
+        // Ganhou pontuação máxima → Não perde nada
+        penalty = 0;
+      } else if (earnedPoints === partialPoints && partialPoints > 0) {
+        // Ganhou pontuação parcial → Perde a diferença (max - parcial)
+        penalty = maxPoints - partialPoints;
+      } else if (earnedPoints === 0) {
+        // Ganhou zero → Perde tudo (max)
+        penalty = maxPoints;
+      } else {
+        // Caso customizado: perde a diferença entre max e o que ganhou
+        penalty = maxPoints - earnedPoints;
+      }
+
+      console.log(`📊 Critério: ${category}.${key} | Ganhou: ${earnedPoints}/${maxPoints} | Penalidade: ${penalty}`);
+      totalPenalty += penalty;
     });
-  }
+  });
 
-  // Deméritos são penalidades adicionais
-  if (scores.demerits) {
-    Object.values(scores.demerits).forEach((value: any) => {
-      penalties += Math.abs(value || 0);
-    });
-  }
+  console.log(`📊 Penalidade Total: ${totalPenalty} | Pontuação Final: ${MAX_SCORE - totalPenalty}`);
 
-  // Pontuação final = Máximo (1910) - Penalidades
-  return Math.max(0, MAX_SCORE - penalties);
+  // Pontuação final = Máximo (1910) - Penalidades totais
+  return Math.max(0, MAX_SCORE - totalPenalty);
 };
 
 // Função para determinar classificação (Campori Paulistana 2025)
@@ -240,6 +248,61 @@ export const getClassificationStats = query({
     });
     
     return stats;
+  },
+});
+
+// Query para buscar critérios travados de um clube
+export const getLockedCriteria = query({
+  args: { clubId: v.id("clubs") },
+  handler: async (ctx, args) => {
+    const lockedCriteria = await ctx.db
+      .query("evaluatedCriteria")
+      .withIndex("by_club", (q) => q.eq("clubId", args.clubId))
+      .filter((q) => q.eq(q.field("isLocked"), true))
+      .collect();
+
+    return lockedCriteria;
+  },
+});
+
+// Mutation para Admin desbloquear um critério
+export const unlockCriterion = mutation({
+  args: {
+    clubId: v.id("clubs"),
+    category: v.string(),
+    criteriaKey: v.string(),
+    adminId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin || admin.role !== "admin") {
+      throw new Error("Apenas administradores podem desbloquear critérios");
+    }
+
+    const locked = await ctx.db
+      .query("evaluatedCriteria")
+      .withIndex("by_club_and_criteria", (q) => 
+        q.eq("clubId", args.clubId)
+         .eq("category", args.category)
+         .eq("criteriaKey", args.criteriaKey)
+      )
+      .first();
+
+    if (locked) {
+      await ctx.db.delete(locked._id);
+      
+      await ctx.db.insert("activityLogs", {
+        userId: args.adminId,
+        userName: admin.name,
+        userRole: admin.role,
+        action: "unlock_criterion",
+        details: `Desbloqueou critério: ${args.category}.${args.criteriaKey}`,
+        timestamp: Date.now(),
+        clubId: args.clubId,
+      });
+    }
+
+    return { success: true };
   },
 });
 
@@ -578,52 +641,7 @@ export const resetAllClubScores = mutation({
 export const updateClubScores = mutation({
   args: {
     clubId: v.id("clubs"),
-    scores: v.object({
-      prerequisites: v.object({
-        photos: v.number(),
-        directorPresence: v.number(),
-      }),
-      participation: v.object({
-        opening: v.number(),
-        saturdayMorning: v.number(),
-        saturdayNight: v.number(),
-        saturdayMeeting: v.number(),
-        sundayMeeting: v.number(),
-      }),
-      general: v.object({
-        firstAidKit: v.number(),
-        secretaryFolder: v.number(),
-        doorIdentification: v.number(),
-        badges: v.number(),
-        uniform: v.number(),
-      }),
-      events: v.object({
-        twelveHour: v.number(),
-        carousel: v.object({
-          abel: v.number(),
-          jacob: v.number(),
-          samson: v.number(),
-          rahab: v.number(),
-          gideon: v.number(),
-          barak: v.number(),
-        }),
-      }),
-      bonus: v.object({
-        pastorVisit: v.number(),
-        adultVolunteer: v.number(),
-        healthProfessional: v.number(),
-      }),
-      demerits: v.object({
-        driverIssues: v.number(),
-        lackReverence: v.number(),
-        noBadge: v.number(),
-        unaccompaniedChild: v.number(),
-        unauthorizedVisits: v.number(),
-        vandalism: v.number(),
-        silenceViolation: v.number(),
-        disrespect: v.number(),
-      }),
-    }),
+    scores: v.any(), // Aceitar qualquer estrutura dinâmica de scores
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -643,166 +661,127 @@ export const updateClubScores = mutation({
       throw new Error("Critérios de pontuação não encontrados");
     }
 
+    // Mesclar scores: manter critérios já avaliados + adicionar novos
+    const currentScores = club.scores || {};
+    const mergedScores: any = JSON.parse(JSON.stringify(currentScores)); // Deep copy
+
+    // Mesclar cada categoria enviada (não exigir todas)
+    Object.keys(args.scores).forEach(category => {
+      if (!mergedScores[category]) {
+        mergedScores[category] = {};
+      }
+      
+      Object.keys(args.scores[category]).forEach(key => {
+        // Sobrescrever ou adicionar o score
+        mergedScores[category][key] = args.scores[category][key];
+      });
+    });
+
     // Validar que as pontuações não excedem os valores máximos permitidos
+    // APENAS para as categorias que foram enviadas
     const validateScores = (scores: any, criteria: any) => {
-      // Validar pré-requisitos
-      Object.entries(scores.prerequisites).forEach(([key, value]: [string, any]) => {
-        const maxValue = criteria.prerequisites[key]?.max || 0;
-        if (value > maxValue) {
-          throw new Error(`Pontuação para ${key} não pode exceder ${maxValue} pontos`);
-        }
-        if (value < 0) {
-          throw new Error(`Pontuação para ${key} não pode ser negativa`);
-        }
-      });
-
-      // Validar participação
-      Object.entries(scores.participation).forEach(([key, value]: [string, any]) => {
-        const maxValue = criteria.participation[key]?.max || 0;
-        if (value > maxValue) {
-          throw new Error(`Pontuação para ${key} não pode exceder ${maxValue} pontos`);
-        }
-        if (value < 0) {
-          throw new Error(`Pontuação para ${key} não pode ser negativa`);
-        }
-      });
-
-      // Validar critérios gerais
-      Object.entries(scores.general).forEach(([key, value]: [string, any]) => {
-        const maxValue = criteria.general[key]?.max || 0;
-        if (value > maxValue) {
-          throw new Error(`Pontuação para ${key} não pode exceder ${maxValue} pontos`);
-        }
-        if (value < 0) {
-          throw new Error(`Pontuação para ${key} não pode ser negativa`);
-        }
-      });
-
-      // Validar eventos
-      Object.entries(scores.events).forEach(([key, value]: [string, any]) => {
-        if (key === 'carousel') {
-          Object.entries(value).forEach(([carouselKey, carouselValue]: [string, any]) => {
-            const maxValue = criteria.events.carousel[carouselKey]?.max || 0;
-            if (carouselValue > maxValue) {
-              throw new Error(`Pontuação para ${carouselKey} não pode exceder ${maxValue} pontos`);
-            }
-            if (carouselValue < 0) {
-              throw new Error(`Pontuação para ${carouselKey} não pode ser negativa`);
-            }
-          });
-        } else {
-          const maxValue = criteria.events[key]?.max || 0;
+      Object.keys(scores).forEach(category => {
+        if (!criteria[category]) return; // Ignorar categorias sem critérios definidos
+        
+        Object.entries(scores[category]).forEach(([key, value]: [string, any]) => {
+          if (!criteria[category][key]) return; // Ignorar critérios não definidos
+          
+          const maxValue = criteria[category][key]?.max || 0;
           if (value > maxValue) {
             throw new Error(`Pontuação para ${key} não pode exceder ${maxValue} pontos`);
           }
           if (value < 0) {
             throw new Error(`Pontuação para ${key} não pode ser negativa`);
           }
-        }
-      });
-
-      // Validar bônus
-      Object.entries(scores.bonus).forEach(([key, value]: [string, any]) => {
-        const maxValue = criteria.bonus[key]?.max || 0;
-        if (value > maxValue) {
-          throw new Error(`Pontuação para ${key} não pode exceder ${maxValue} pontos`);
-        }
-        if (value < 0) {
-          throw new Error(`Pontuação para ${key} não pode ser negativa`);
-        }
-      });
-
-      // Deméritos são valores positivos que representam penalidades (serão subtraídos na pontuação final)
-      Object.entries(scores.demerits).forEach(([key, value]: [string, any]) => {
-        if (value < 0) {
-          throw new Error(`Demérito ${key} deve ser um valor positivo (representa penalidade)`);
-        }
+        });
       });
     };
 
-    // Validar pontuações
+    // Validar APENAS os scores enviados (não os mesclados)
     validateScores(args.scores, criteria);
 
-    // Calcular nova pontuação total
-    const newTotalScore = calculateTotalScore(args.scores);
+    // Calcular nova pontuação total e classificação
+    const newTotalScore = calculateTotalScore(mergedScores, criteria);
     const newClassification = getClassification(newTotalScore);
 
-    // Registrar mudanças detalhadas no log
-    const oldScores = club.scores;
-    if (oldScores) {
-      const logChanges = async (category: string, oldCat: any, newCat: any) => {
-        for (const [key, newValue] of Object.entries(newCat)) {
-          const oldValue = oldCat[key];
-          if (oldValue !== newValue) {
-            if (typeof newValue === 'object' && newValue !== null) {
-              // Para objetos aninhados como carousel
-              for (const [subKey, subNewValue] of Object.entries(newValue)) {
-                const subOldValue = oldValue?.[subKey];
-                if (subOldValue !== subNewValue) {
-                  await ctx.db.insert("activityLogs", {
-                    userId: args.userId,
-                    userName: user.name,
-                    userRole: user.role,
-                    action: "score_update",
-                    details: `Pontuação alterada: ${category}.${key}.${subKey}`,
-                    timestamp: Date.now(),
-                    clubId: args.clubId,
-                    clubName: club.name,
-                    scoreChange: {
-                      category: `${category}.${key}`,
-                      subcategory: subKey,
-                      oldValue: subOldValue || 0,
-                      newValue: subNewValue as number,
-                      difference: (subNewValue as number) - (subOldValue || 0),
-                    },
-                  });
-                }
-              }
-            } else {
-              await ctx.db.insert("activityLogs", {
-                userId: args.userId,
-                userName: user.name,
-                userRole: user.role,
-                action: "score_update",
-                details: `Pontuação alterada: ${category}.${key}`,
-                timestamp: Date.now(),
-                clubId: args.clubId,
-                clubName: club.name,
-                scoreChange: {
-                  category,
-                  subcategory: key,
-                  oldValue: oldValue || 0,
-                  newValue: newValue as number,
-                  difference: (newValue as number) - (oldValue || 0),
-                },
-              });
-            }
-          }
+    // Registrar mudanças nos logs E travar critérios avaliados
+    for (const category of Object.keys(args.scores)) {
+      for (const key of Object.keys(args.scores[category])) {
+        const oldValue = currentScores[category]?.[key] || 0;
+        const newValue = args.scores[category][key];
+        
+        // IGNORAR objetos aninhados (como carousel) - só processar números
+        if (typeof newValue !== 'number') {
+          continue;
         }
-      };
+        
+        // Verificar se o critério já está travado
+        const existingLock = await ctx.db
+          .query("evaluatedCriteria")
+          .withIndex("by_club_and_criteria", (q) => 
+            q.eq("clubId", args.clubId)
+             .eq("category", category)
+             .eq("criteriaKey", key)
+          )
+          .first();
 
-      await logChanges("prerequisites", oldScores.prerequisites, args.scores.prerequisites);
-      await logChanges("participation", oldScores.participation, args.scores.participation);
-      await logChanges("general", oldScores.general, args.scores.general);
-      await logChanges("events", oldScores.events, args.scores.events);
-      await logChanges("bonus", oldScores.bonus, args.scores.bonus);
-      await logChanges("demerits", oldScores.demerits, args.scores.demerits);
+        if (!existingLock) {
+          // Travar o critério pela primeira vez
+          await ctx.db.insert("evaluatedCriteria", {
+            clubId: args.clubId,
+            category,
+            criteriaKey: key,
+            evaluatedBy: args.userId,
+            evaluatedAt: Date.now(),
+            score: newValue,
+            isLocked: true,
+          });
+        } else if (oldValue !== newValue) {
+          // Atualizar score mas manter travado
+          await ctx.db.patch(existingLock._id, {
+            score: newValue,
+            evaluatedBy: args.userId,
+            evaluatedAt: Date.now(),
+          });
+        }
+        
+        // Log da mudança
+        if (oldValue !== newValue) {
+          await ctx.db.insert("activityLogs", {
+            userId: args.userId,
+            userName: user.name,
+            userRole: user.role,
+            action: "score_update",
+            details: `${category}.${key}: ${oldValue} → ${newValue}`,
+            timestamp: Date.now(),
+            clubId: args.clubId,
+            clubName: club.name,
+            scoreChange: {
+              category,
+              subcategory: key,
+              oldValue,
+              newValue,
+              difference: newValue - oldValue,
+            },
+          });
+        }
+      }
     }
 
-    // Atualizar clube
+    // Atualizar clube com scores mesclados
     await ctx.db.patch(args.clubId, {
-      scores: args.scores,
+      scores: mergedScores,
       totalScore: newTotalScore,
       classification: newClassification,
     });
 
-    // Log da atualização geral
+    // Log da avaliação
     await ctx.db.insert("activityLogs", {
       userId: args.userId,
       userName: user.name,
       userRole: user.role,
       action: "club_evaluation",
-      details: `Avaliação completa do clube realizada. Nova pontuação: ${newTotalScore} pts (${newClassification})`,
+      details: `Avaliação realizada. Pontuação: ${newTotalScore} pts (${newClassification})`,
       timestamp: Date.now(),
       clubId: args.clubId,
       clubName: club.name,
