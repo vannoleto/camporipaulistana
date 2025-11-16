@@ -14,84 +14,9 @@ const applicationTables = {
     isActive: v.boolean(),
     membersCount: v.optional(v.number()),
     classification: v.optional(v.string()), // OURO, PRATA, BRONZE, PARTICIPACAO
-    // Pontuações detalhadas
-    scores: v.optional(v.object({
-      prerequisites: v.object({
-        directorPresence: v.number(), // 0, 30
-      }),
-      campground: v.object({
-        portal: v.number(), // 0, 20, 40
-        clothesline: v.number(), // 0, 5, 10
-        pioneers: v.number(), // 0, 5, 10
-        campfireArea: v.number(), // 0, 5, 10
-        materials: v.number(), // 0, 5, 10
-        tentOrganization: v.number(), // 0, 20, 40
-        security: v.number(), // 0, 20, 40
-        readyCamp: v.number(), // 0, 40, 80
-        chairsOrBench: v.number(), // 0, 20, 40
-      }),
-      kitchen: v.object({
-        tentSetup: v.number(), // 0, 10, 20
-        identification: v.number(), // 0, 5, 10
-        tentSize: v.number(), // 0, 5, 10
-        gasRegister: v.number(), // 0, 10, 20
-        firePosition: v.number(), // 0, 5, 10
-        refrigerator: v.number(), // 0, 5, 10
-        tables: v.number(), // 0, 10
-        extinguisher: v.number(), // 0, 20
-        menu: v.number(), // 0, 30
-        menuDisplay: v.number(), // 0, 5, 10
-        containers: v.number(), // 0, 5, 10
-        uniform: v.number(), // 0, 5, 10
-        handSanitizer: v.number(), // 0, 5, 10
-        washBasin: v.number(), // 0, 5, 10
-        cleaning: v.number(), // 0, 10, 20
-        water: v.number(), // 0, 5, 10
-        identification2: v.number(), // 0, 5, 10
-      }),
-      participation: v.object({
-        opening: v.number(), // 0, 30, 60
-        saturdayMorning: v.number(), // 0, 30, 60
-        saturdayEvening: v.number(), // 0, 30, 60
-        sundayMorning: v.number(), // 0, 30, 60
-        saturdayAfternoon: v.number(), // 0, 30, 60
-        sundayEvening: v.number(), // 0, 30, 60
-        directorMeetingFriday: v.number(), // 0, 30
-        directorMeetingSaturday: v.number(), // 0, 30
-      }),
-      uniform: v.object({
-        programmedUniform: v.number(), // 0, 40, 80
-        badges: v.number(), // 0, 20, 40
-      }),
-      secretary: v.object({
-        firstAidKit: v.number(), // 0, 50, 100
-        secretaryFolder: v.number(), // 0, 50, 100
-        healthFolder: v.number(), // 0, 50, 100
-      }),
-      events: v.object({
-        carousel: v.number(), // 0, 200
-        extraActivities: v.number(), // 0, 100
-        representative: v.number(), // 0, 50
-      }),
-      bonus: v.object({
-        pastorVisit: v.number(), // 0, 50
-        healthProfessional: v.number(), // 0, 100
-      }),
-      demerits: v.object({
-        noIdentification: v.number(), // negativo
-        unaccompanied: v.number(), // negativo
-        inappropriate: v.number(), // negativo
-        campingActivity: v.number(), // negativo
-        interference: v.number(), // negativo
-        improperClothing: v.number(), // negativo
-        disrespect: v.number(), // negativo
-        improperBehavior: v.number(), // negativo
-        substances: v.number(), // negativo
-        sexOpposite: v.number(), // negativo
-        artificialFires: v.number(), // negativo
-        unauthorizedVehicles: v.number(), // negativo
-      }),
-    })),
+    // Pontuações customizáveis - estrutura dinâmica baseada em scoringCriteria
+    scores: v.optional(v.any()),
+    lastUpdated: v.optional(v.number()),
   }).index("by_region", ["region"])
     .index("by_classification", ["classification"]),
 

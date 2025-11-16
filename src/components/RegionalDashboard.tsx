@@ -40,12 +40,13 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
       ? Math.round(regionClubs.reduce((sum, club) => sum + club.totalScore, 0) / regionClubs.length)
       : 0,
     classifications: {
-      HEROI: regionClubs.filter(c => c.classification === "HEROI").length,
-      FIEL_ESCUDEIRO: regionClubs.filter(c => c.classification === "FIEL_ESCUDEIRO").length,
+      MISSIONÁRIO: regionClubs.filter(c => c.classification === "MISSIONÁRIO").length,
+      VOLUNTÁRIO: regionClubs.filter(c => c.classification === "VOLUNTÁRIO").length,
       APRENDIZ: regionClubs.filter(c => c.classification === "APRENDIZ").length,
     },
     highestScore: regionClubs.length > 0 ? Math.max(...regionClubs.map(c => c.totalScore)) : 0,
     lowestScore: regionClubs.length > 0 ? Math.min(...regionClubs.map(c => c.totalScore)) : 0,
+    totalMembers: regionClubs.reduce((sum, club) => sum + (club.membersCount || 0), 0),
   } : null;
 
   // Filtrar clubes baseado na busca
@@ -105,9 +106,9 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
         <div className="bg-purple-50 p-6 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-600 text-sm font-medium">Clubes Herói</p>
+              <p className="text-purple-600 text-sm font-medium">Clubes Missionário</p>
               <p className="text-2xl font-bold text-purple-900">
-                {regionStats?.classifications.HEROI || 0}
+                {regionStats?.classifications.MISSIONÁRIO || 0}
               </p>
             </div>
             <div className="text-purple-500">
@@ -125,20 +126,20 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
               <div className="mb-3 text-yellow-500">
                 <Crown size={40} />
               </div>
-              <div className="text-3xl font-bold text-purple-600">{regionStats.classifications.HEROI}</div>
-              <div className="text-sm text-gray-600 font-medium">HERÓI</div>
+              <div className="text-3xl font-bold text-purple-600">{regionStats.classifications.MISSIONÁRIO}</div>
+              <div className="text-sm text-gray-600 font-medium">MISSIONÁRIO</div>
               <div className="text-xs text-gray-500 mt-1">
-                {regionStats.total > 0 ? Math.round((regionStats.classifications.HEROI / regionStats.total) * 100) : 0}%
+                {regionStats.total > 0 ? Math.round((regionStats.classifications.MISSIONÁRIO / regionStats.total) * 100) : 0}%
               </div>
             </div>
             <div className="text-center">
               <div className="mb-3 text-blue-600">
                 <Trophy size={40} />
               </div>
-              <div className="text-3xl font-bold text-blue-600">{regionStats.classifications.FIEL_ESCUDEIRO}</div>
-              <div className="text-sm text-gray-600 font-medium">FIEL ESCUDEIRO</div>
+              <div className="text-3xl font-bold text-blue-600">{regionStats.classifications.VOLUNTÁRIO}</div>
+              <div className="text-sm text-gray-600 font-medium">VOLUNTÁRIO</div>
               <div className="text-xs text-gray-500 mt-1">
-                {regionStats.total > 0 ? Math.round((regionStats.classifications.FIEL_ESCUDEIRO / regionStats.total) * 100) : 0}%
+                {regionStats.total > 0 ? Math.round((regionStats.classifications.VOLUNTÁRIO / regionStats.total) * 100) : 0}%
               </div>
             </div>
             <div className="text-center">
@@ -224,6 +225,9 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
                   Clube
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Membros
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Pontuação
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -237,7 +241,7 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
             <tbody className="divide-y divide-gray-200">
               {filteredClubs?.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     {clubSearch ? "Nenhum clube encontrado para a busca" : "Nenhum clube cadastrado na região"}
                   </td>
                 </tr>
@@ -257,26 +261,29 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap font-medium">{club.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-blue-600 font-medium">{club.membersCount || 0} membros</span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap font-bold text-lg">
                         {club.totalScore.toLocaleString()} pts
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          club.classification === "HEROI" 
+                          club.classification === "MISSIONÁRIO" 
                             ? "bg-purple-100 text-purple-800"
-                            : club.classification === "FIEL_ESCUDEIRO"
+                            : club.classification === "VOLUNTÁRIO"
                             ? "bg-blue-100 text-blue-800"
                             : "bg-green-100 text-green-800"
                         }`}>
-                          {club.classification === "HEROI" ? (
+                          {club.classification === "MISSIONÁRIO" ? (
                             <span className="flex items-center gap-1">
                               <Crown size={12} />
-                              HERÓI
+                              MISSIONÁRIO
                             </span>
-                          ) : club.classification === "FIEL_ESCUDEIRO" ? (
+                          ) : club.classification === "VOLUNTÁRIO" ? (
                             <span className="flex items-center gap-1">
                               <Trophy size={12} />
-                              FIEL ESCUDEIRO
+                              VOLUNTÁRIO
                             </span>
                           ) : (
                             <span className="flex items-center gap-1">
@@ -335,21 +342,21 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
               <div className="text-right">
                 <div className="font-bold text-xl">{club.totalScore.toLocaleString()} pts</div>
                 <div className={`text-sm px-3 py-1 rounded-full font-medium ${
-                  club.classification === "HEROI" 
+                  club.classification === "MISSIONÁRIO" 
                     ? "bg-purple-100 text-purple-800"
-                    : club.classification === "FIEL_ESCUDEIRO"
+                    : club.classification === "VOLUNTÁRIO"
                     ? "bg-blue-100 text-blue-800"
                     : "bg-green-100 text-green-800"
                 }`}>
-                  {club.classification === "HEROI" ? (
+                  {club.classification === "MISSIONÁRIO" ? (
                     <span className="flex items-center gap-1">
                       <Crown size={14} />
-                      HERÓI
+                      MISSIONÁRIO
                     </span>
-                  ) : club.classification === "FIEL_ESCUDEIRO" ? (
+                  ) : club.classification === "VOLUNTÁRIO" ? (
                     <span className="flex items-center gap-1">
                       <Trophy size={14} />
-                      FIEL ESCUDEIRO
+                      VOLUNTÁRIO
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
@@ -401,11 +408,11 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
                 <div className="mt-2 text-xs text-gray-500">
                   <div className="flex items-center gap-2">
                     <Crown size={16} className="text-yellow-500" />
-                    {stats.classifications.HEROI}
+                    {stats.classifications.MISSIONÁRIO}
                   </div>
                   <div className="flex items-center gap-2">
                     <Trophy size={16} className="text-blue-500" />
-                    {stats.classifications.FIEL_ESCUDEIRO}
+                    {stats.classifications.VOLUNTÁRIO}
                   </div>
                   <div className="flex items-center gap-2">
                     <Target size={16} className="text-green-500" />
@@ -458,21 +465,21 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-600 flex items-center gap-1">
                     <Crown size={16} />
-                    Heróis:
+                    Missionários:
                   </span>
                   <span className="font-medium">
-                    {regionStats.classifications.HEROI} 
-                    ({regionStats.total > 0 ? Math.round((regionStats.classifications.HEROI / regionStats.total) * 100) : 0}%)
+                    {regionStats.classifications.MISSIONÁRIO} 
+                    ({regionStats.total > 0 ? Math.round((regionStats.classifications.MISSIONÁRIO / regionStats.total) * 100) : 0}%)
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 flex items-center gap-1">
                     <Trophy size={16} />
-                    Fiel Escudeiros:
+                    Voluntários:
                   </span>
                   <span className="font-medium">
-                    {regionStats.classifications.FIEL_ESCUDEIRO}
-                    ({regionStats.total > 0 ? Math.round((regionStats.classifications.FIEL_ESCUDEIRO / regionStats.total) * 100) : 0}%)
+                    {regionStats.classifications.VOLUNTÁRIO}
+                    ({regionStats.total > 0 ? Math.round((regionStats.classifications.VOLUNTÁRIO / regionStats.total) * 100) : 0}%)
                   </span>
                 </div>
                 <div className="flex justify-between">

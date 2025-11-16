@@ -247,62 +247,77 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
 
 
   // Função para calcular pontuação total baseada na estrutura de pontuações (IGUAL AO ADMINDASHBOARD E STAFFDASHBOARD)
+  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
   const calculateTotalScore = (scores: any) => {
-    if (!scores) return 0;
+    if (!scores) return 1910; // Pontuação máxima inicial
 
-    let totalScore = 0;
+    const MAX_SCORE = 1910;
+    let penalties = 0;
 
-    // Somar pontuações de cada categoria
+    // Calcular penalidades (pontos perdidos) por cada categoria
     if (scores.prerequisites) {
       Object.values(scores.prerequisites).forEach((value: any) => {
-        totalScore += Math.abs(value || 0);
+        penalties += Math.abs(value || 0);
+      });
+    }
+
+    if (scores.campground) {
+      Object.values(scores.campground).forEach((value: any) => {
+        penalties += Math.abs(value || 0);
+      });
+    }
+
+    if (scores.kitchen) {
+      Object.values(scores.kitchen).forEach((value: any) => {
+        penalties += Math.abs(value || 0);
       });
     }
 
     if (scores.participation) {
       Object.values(scores.participation).forEach((value: any) => {
-        totalScore += Math.abs(value || 0);
+        penalties += Math.abs(value || 0);
       });
     }
 
-    if (scores.general) {
-      Object.values(scores.general).forEach((value: any) => {
-        totalScore += Math.abs(value || 0);
+    if (scores.uniform) {
+      Object.values(scores.uniform).forEach((value: any) => {
+        penalties += Math.abs(value || 0);
+      });
+    }
+
+    if (scores.secretary) {
+      Object.values(scores.secretary).forEach((value: any) => {
+        penalties += Math.abs(value || 0);
       });
     }
 
     if (scores.events) {
-      Object.entries(scores.events).forEach(([key, value]: [string, any]) => {
-        if (key === 'carousel') {
-          Object.values(value).forEach((carouselValue: any) => {
-            totalScore += Math.abs(carouselValue || 0);
-          });
-        } else {
-          totalScore += Math.abs(value || 0);
-        }
+      Object.values(scores.events).forEach((value: any) => {
+        penalties += Math.abs(value || 0);
       });
     }
 
     if (scores.bonus) {
       Object.values(scores.bonus).forEach((value: any) => {
-        totalScore += Math.abs(value || 0);
+        penalties += Math.abs(value || 0);
       });
     }
 
-    // Deméritos são subtraídos (valores positivos representam penalidades)
+    // Deméritos são penalidades adicionais
     if (scores.demerits) {
       Object.values(scores.demerits).forEach((value: any) => {
-        totalScore -= (value || 0);
+        penalties += Math.abs(value || 0);
       });
     }
 
-    return Math.max(0, totalScore);
+    // Pontuação final = Máximo - Penalidades
+    return Math.max(0, MAX_SCORE - penalties);
   };
 
   // Função para obter classificação baseada na pontuação
   const getClassification = (totalScore: number): string => {
-    if (totalScore >= 2300) return "HEROI";
-    if (totalScore >= 1100) return "FIEL_ESCUDEIRO";
+    if (totalScore >= 1496) return "MISSIONÁRIO";
+    if (totalScore >= 1232) return "VOLUNTÁRIO";
     return "APRENDIZ";
   };
 
@@ -362,7 +377,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     const currentScores = userClub.scores;
     const totalScore = calculateTotalScore(currentScores);
     const classification = getClassification(totalScore);
-    const maxPossibleScore = 4100; // Score máximo possível
+    const maxPossibleScore = 1910; // Score máximo possível
     const progressPercentage = Math.min((totalScore / maxPossibleScore) * 100, 100);
 
     return (
@@ -427,15 +442,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               ? "bg-blue-100 text-blue-800"
               : "bg-green-100 text-green-800"
           }`}>
-            {classification === "HEROI" ? (
+            {classification === "MISSIONÁRIO" ? (
               <>
                 <Crown size={20} className="mr-2" />
-                HERÓI
+                MISSIONÁRIO
               </>
-            ) : classification === "FIEL_ESCUDEIRO" ? (
+            ) : classification === "VOLUNTÁRIO" ? (
               <>
                 <Trophy size={20} className="mr-2" />
-                FIEL ESCUDEIRO
+                VOLUNTÁRIO
               </>
             ) : (
               <>
@@ -468,15 +483,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
             <div className="text-sm font-medium text-gray-700 mb-2">Próximo Nível</div>
             {classification === "APRENDIZ" && (
               <div className="text-lg font-semibold text-blue-600">
-                Faltam {(800 - totalScore).toLocaleString()} pontos para FIEL ESCUDEIRO
+                Faltam {(1232 - totalScore).toLocaleString()} pontos para VOLUNTÁRIO
               </div>
             )}
-            {classification === "FIEL_ESCUDEIRO" && (
+            {classification === "VOLUNTÁRIO" && (
               <div className="text-lg font-semibold text-purple-600">
-                Faltam {(1100 - totalScore).toLocaleString()} pontos para HERÓI
+                Faltam {(1496 - totalScore).toLocaleString()} pontos para MISSIONÁRIO
               </div>
             )}
-            {classification === "HEROI" && (
+            {classification === "MISSIONÁRIO" && (
               <div className="text-lg font-semibold text-purple-600">
                 🎉 Nível máximo alcançado!
               </div>
@@ -566,15 +581,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                   ? "bg-blue-100 text-blue-800"
                   : "bg-green-100 text-green-800"
               }`}>
-                {classification === "HEROI" ? (
+                {classification === "MISSIONÁRIO" ? (
                   <span className="flex items-center gap-1">
                     <Crown size={16} />
-                    HERÓI
+                    MISSIONÁRIO
                   </span>
-                ) : classification === "FIEL_ESCUDEIRO" ? (
+                ) : classification === "VOLUNTÁRIO" ? (
                   <span className="flex items-center gap-1">
                     <Trophy size={16} />
-                    FIEL ESCUDEIRO
+                    VOLUNTÁRIO
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
@@ -774,15 +789,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                 {calculateTotalScore(currentScores).toLocaleString()} pts
               </div>
               <div className="text-lg flex items-center gap-3 mt-2">
-                {getClassification(calculateTotalScore(currentScores)) === "HEROI" ? (
+                {getClassification(calculateTotalScore(currentScores)) === "MISSIONÁRIO" ? (
                   <>
                     <Crown size={20} className="text-yellow-500" />
-                    HERÓI
+                    MISSIONÁRIO
                   </>
-                ) : getClassification(calculateTotalScore(currentScores)) === "FIEL_ESCUDEIRO" ? (
+                ) : getClassification(calculateTotalScore(currentScores)) === "VOLUNTÁRIO" ? (
                   <>
                     <Trophy size={20} className="text-blue-500" />
-                    FIEL ESCUDEIRO
+                    VOLUNTÁRIO
                   </>
                 ) : (
                   <>

@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { AdminScoringMobile } from "./AdminScoringMobile";
+import { CriteriaManager } from "./CriteriaManager";
 import { 
   Check, 
   Trash2, 
@@ -1050,6 +1051,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     { id: "pending", name: "Aprovações", icon: <Search size={20} /> },
     { id: "ranking", name: "Ranking", icon: <Trophy size={20} /> },
     { id: "scoring", name: "Pontuação", icon: <ClipboardList size={20} /> },
+    { id: "criteria", name: "Critérios", icon: <Settings size={20} /> },
     { id: "pdf", name: "Gerar PDF", icon: <FileText size={20} /> },
     { id: "system", name: "Sistema", icon: <Settings size={20} /> },
   ];
@@ -1175,86 +1177,18 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       return null;
     }
 
-    // Usar dados padrão se scoringCriteria não estiver disponível
-    const defaultCriteria = {
-      prerequisites: {
-        directorPresence: { max: 30, description: "Presença do diretor na reunião prévia" }
-      },
-      campground: {
-        portal: { max: 40, description: "Portal identificado" },
-        clothesline: { max: 10, description: "Varal de roupas" },
-        pioneers: { max: 10, description: "Pequenas pioneiras" },
-        campfireArea: { max: 10, description: "Área cercada" },
-        materials: { max: 10, description: "Depósito de materiais" },
-        tentOrganization: { max: 40, description: "Organização das barracas" },
-        security: { max: 40, description: "Segurança" },
-        readyCamp: { max: 80, description: "Acampamento pronto" },
-        chairsOrBench: { max: 40, description: "Cadeiras/banquetas" }
-      },
-      kitchen: {
-        tentSetup: { max: 20, description: "Montagem da tenda" },
-        identification: { max: 10, description: "Identificação da cozinha" },
-        tentSize: { max: 10, description: "Tamanho da tenda" },
-        gasRegister: { max: 20, description: "Gás e mangueira" },
-        firePosition: { max: 10, description: "Posição do fogão" },
-        refrigerator: { max: 10, description: "Posição da geladeira" },
-        tables: { max: 10, description: "Tomadas/mesas" },
-        extinguisher: { max: 20, description: "Extintor de incêndio" },
-        menu: { max: 30, description: "Cardápio vegetariano" },
-        menuDisplay: { max: 10, description: "Exposição do cardápio" },
-        containers: { max: 10, description: "Recipientes adequados" },
-        uniform: { max: 10, description: "Uniforme da equipe" },
-        handSanitizer: { max: 10, description: "Higienizador de mãos" },
-        washBasin: { max: 10, description: "Lavatório" },
-        cleaning: { max: 20, description: "Limpeza do local" },
-        water: { max: 10, description: "Água potável" },
-        identification2: { max: 10, description: "Saquetas identificadas" }
-      },
-      participation: {
-        opening: { max: 60, description: "Programa de abertura" },
-        saturdayMorning: { max: 60, description: "Sexta-feira manhã" },
-        saturdayEvening: { max: 60, description: "Sexta-feira noite" },
-        sundayMorning: { max: 60, description: "Sábado manhã" },
-        saturdayAfternoon: { max: 60, description: "Sábado tarde" },
-        sundayEvening: { max: 60, description: "Domingo manhã" },
-        directorMeetingFriday: { max: 30, description: "Reunião diretoria sexta" },
-        directorMeetingSaturday: { max: 30, description: "Reunião diretoria sábado" }
-      },
-      uniform: {
-        programmedUniform: { max: 80, description: "Uniforme programado sábado manhã" },
-        badges: { max: 40, description: "Bandeirins das unidades" }
-      },
-      secretary: {
-        firstAidKit: { max: 100, description: "Kit primeiros socorros completo" },
-        secretaryFolder: { max: 100, description: "Pasta de secretaria completa" },
-        healthFolder: { max: 100, description: "Pasta de saúde completa" }
-      },
-      events: {
-        carousel: { max: 200, description: "Carrossel de aventura" },
-        extraActivities: { max: 100, description: "Atividades extras" },
-        representative: { max: 50, description: "Representante 24h" }
-      },
-      bonus: {
-        pastorVisit: { max: 50, description: "Visita do pastor distrital" },
-        healthProfessional: { max: 100, description: "Profissional de saúde na escala" }
-      },
-      demerits: {
-        noIdentification: { penalty: -100, description: "Membro sem pulseira de identificação" },
-        unaccompanied: { penalty: -100, description: "Desbravador desacompanhado" },
-        inappropriate: { penalty: -100, description: "Uso inapropriado de lanternas/laser/instrumentos" },
-        campingActivity: { penalty: -100, description: "Atividade na área ou som alto após silêncio" },
-        interference: { penalty: -100, description: "Visitas interferindo fora do período" },
-        improperClothing: { penalty: -100, description: "Roupas inapropriadas ou sem camisa" },
-        disrespect: { penalty: -100, description: "Desrespeito ao staff ou agressão" },
-        improperBehavior: { penalty: -100, description: "Contato físico excessivo entre casais" },
-        substances: { penalty: -100, description: "Uso/posse de substâncias ilícitas" },
-        sexOpposite: { penalty: -100, description: "Entrar em barracas do sexo oposto" },
-        artificialFires: { penalty: -100, description: "Uso de fogos artificiais" },
-        unauthorizedVehicles: { penalty: -100, description: "Veículos não autorizados" }
-      }
+    // Usar critérios do banco de dados - se não existir, usar estrutura vazia
+    const criteriaToUse = scoringCriteria || {
+      prerequisites: {},
+      campground: {},
+      kitchen: {},
+      participation: {},
+      uniform: {},
+      secretary: {},
+      events: {},
+      bonus: {},
+      demerits: {}
     };
-
-    const criteriaToUse = scoringCriteria || defaultCriteria;
 
     const currentScores = editingScores;
     const totalScore = calculateTotalScore(currentScores);
@@ -3518,6 +3452,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         return renderRanking();
       case "scoring":
         return renderScoring();
+      case "criteria":
+        return <CriteriaManager user={user} />;
       case "pdf":
         return renderPDF();
       case "system":
