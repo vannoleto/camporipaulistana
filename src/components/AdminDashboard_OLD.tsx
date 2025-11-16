@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import { AdminScoringMobile } from "./AdminScoringMobile";
 import { 
   Check, 
   Trash2, 
@@ -43,12 +42,13 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
+export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   console.log("=== ADMINDASHBOARD START ===");
   console.log("AdminDashboard: Component is rendering", { user });
   console.log("AdminDashboard: Props received", { user, onLogout });
 
   // Versão simplificada para debug
+  try {
     const [activeTab, setActiveTab] = useState("overview");
     const [editingCriteria, setEditingCriteria] = useState<any>(null);
     const [clubSearch, setClubSearch] = useState("");
@@ -71,18 +71,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [selectedClubForScoring, setSelectedClubForScoring] = useState<string>("");
-    
-    // Estados para a interface de Pontuação
-    const [showScoringModal, setShowScoringModal] = useState(false);
-    const [scoringModalMode, setScoringModalMode] = useState<'create' | 'edit'>('create');
-    const [scoringSelectedCategory, setScoringSelectedCategory] = useState<string>('');
-    const [editingCriterionKey, setEditingCriterionKey] = useState<any>(null);
-    const [scoringFormData, setScoringFormData] = useState({
-      key: '',
-      description: '',
-      max: 0,
-      partial: 0
-    });
 
     console.log("AdminDashboard: About to call basic queries");
 
@@ -132,9 +120,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const resetClubsToMaxScore = useMutation(api.clubs.resetAllClubScores);
     const updateScoringCriteria = useMutation(api.scoring.updateScoringCriteria);
     const resetScoringCriteria = useMutation(api.scoring.resetScoringCriteria);
-    const createScoringCriterion = useMutation(api.scoring.createScoringCriterion);
-    const updateScoringCriterion = useMutation(api.scoring.updateScoringCriterion);
-    const deleteScoringCriterion = useMutation(api.scoring.deleteScoringCriterion);
     const fixClubScores = useMutation(api.clubs.fixClubScores);
     const reclassifyAllClubs = useMutation(api.classification.reclassifyAllClubs);
     const validateAllClassifications = useMutation(api.classification.validateAllClassifications);
@@ -144,7 +129,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const unlockCriteria = useMutation(api.evaluation.unlockCriteria);
     const clearAllCriteriaLocks = useMutation(api.evaluation.clearAllCriteriaLocks);
     const clearAllActivityLogs = useMutation(api.clubs.clearAllActivityLogs);
-    const importClubsBatch = useMutation(api.clubs.importClubsBatch);
     const deleteClub = useMutation(api.clubs.deleteClub);
     const createClub = useMutation(api.clubs.createClub);
     
@@ -163,9 +147,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             totalScore: 0,
             averageScore: 0,
             classifications: {
-              MISSIONÁRIO: 0,
-              VOLUNTÁRIO: 0,
-              APRENDIZ: 0
+              OURO: 0,
+              PRATA: 0,
+              BRONZE: 0,
+              PARTICIPACAO: 0
             }
           };
         }
@@ -176,8 +161,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         if (club.classification) {
           stats[club.region].classifications[club.classification]++;
         } else {
-          // Se não tem classificação, assume APRENDIZ
-          stats[club.region].classifications.APRENDIZ++;
+          // Se não tem classificação, assume PARTICIPACAO
+          stats[club.region].classifications.PARTICIPACAO++;
         }
       });
       
@@ -192,15 +177,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     };
 
     const calculateClassificationStats = () => {
-      if (!clubs || clubs.length === 0) return { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
+      if (!clubs || clubs.length === 0) return { OURO: 0, PRATA: 0, BRONZE: 0, PARTICIPACAO: 0 };
       
-      const stats = { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
+      const stats = { OURO: 0, PRATA: 0, BRONZE: 0, PARTICIPACAO: 0 };
       
       clubs.forEach(club => {
         if (club.classification) {
           stats[club.classification as keyof typeof stats]++;
         } else {
-          stats.APRENDIZ++;
+          stats.PARTICIPACAO++;
         }
       });
       
@@ -230,77 +215,75 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const activityLogs: any[] = [];
 
   // Função para calcular pontuação total baseada na estrutura de pontuações
-  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
   const calculateTotalScore = (scores: any) => {
-    if (!scores) return 1910; // Pontuação máxima inicial
+    if (!scores) return 0;
 
-    const MAX_SCORE = 1910;
-    let penalties = 0;
+    let totalScore = 0;
 
-    // Calcular penalidades (pontos perdidos) por cada categoria
+    // Somar pontuações de cada categoria
     if (scores.prerequisites) {
       Object.values(scores.prerequisites).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.campground) {
       Object.values(scores.campground).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.kitchen) {
       Object.values(scores.kitchen).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.participation) {
       Object.values(scores.participation).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.uniform) {
       Object.values(scores.uniform).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.secretary) {
       Object.values(scores.secretary).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.events) {
       Object.values(scores.events).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
     if (scores.bonus) {
       Object.values(scores.bonus).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore += Math.abs(value || 0);
       });
     }
 
-    // Deméritos são penalidades adicionais
+    // Deméritos são subtraídos (valores positivos representam penalidades)
     if (scores.demerits) {
       Object.values(scores.demerits).forEach((value: any) => {
-        penalties += Math.abs(value || 0);
+        totalScore -= (value || 0);
       });
     }
 
-    // Pontuação final = Máximo - Penalidades
-    return Math.max(0, MAX_SCORE - penalties);
+    return Math.max(0, totalScore);
   };
 
   const getClassification = (totalScore: number): string => {
-    if (totalScore >= 1496) return "MISSIONÁRIO";
-    if (totalScore >= 1232) return "VOLUNTÁRIO";
-    return "APRENDIZ";
+    if (totalScore >= 1500) return "OURO";
+    if (totalScore >= 1000) return "PRATA";
+    if (totalScore >= 500) return "BRONZE";
+    return "PARTICIPACAO";
   };
 
 
@@ -320,9 +303,9 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       
       if (subcategory.includes('.')) {
         const [subcat, item] = subcategory.split('.');
-        itemData = (scoringCriteria as any)[category]?.[subcat]?.[item];
+        itemData = scoringCriteria[category]?.[subcat]?.[item];
       } else {
-        itemData = (scoringCriteria as any)[category]?.[subcategory];
+        itemData = scoringCriteria[category]?.[subcategory];
       }
       
       if (itemData) {
@@ -539,16 +522,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     }
   };
 
-
-
   const handleResetClubsToMaxScore = async () => {
     try {
+      // Reset das pontuações
       const result = await resetClubsToMaxScore({});
       
+      // Limpar todos os travamentos
       await clearAllCriteriaLocks({
         adminId: user._id,
       });
       
+      // Limpar todo o histórico de atividades
       const historyResult = await clearAllActivityLogs({
         adminId: user._id,
       });
@@ -738,33 +722,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     }
   };
 
-  const handleImportClubs = async () => {
-    try {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      input.onchange = async (e: any) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const clubs = JSON.parse(event.target?.result as string);
-            const result = await importClubsBatch({ clubs, adminId: user._id });
-            toast.success(result.message);
-          } catch (error: any) {
-            toast.error('Erro ao importar clubes: ' + error.message);
-          }
-        };
-        reader.readAsText(file);
-      };
-      input.click();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
   const handleDeleteClub = async (clubId: string, clubName: string) => {
     if (!confirm(`Tem certeza que deseja excluir o clube "${clubName}"? Esta ação não pode ser desfeita.`)) {
       return;
@@ -948,7 +905,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       pdf.text("CLASSIFICAÇÃO:", margin + 10, y);
       y += 4;
       pdf.setFontSize(7);
-      pdf.text("□ MISSIONÁRIO (≥1496)   □ VOLUNTÁRIO (1232-1495)   □ APRENDIZ (≤1231)", margin + 12, y);
+      pdf.text("□ OURO (≥1500)   □ PRATA (1000-1499)   □ BRONZE (500-999)   □ PARTICIPAÇÃO (<500)", margin + 12, y);
 
       // Rodapé
       y = pdf.internal.pageSize.height - 15;
@@ -1062,7 +1019,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           <div className="text-blue-800">
             <p className="font-medium">Sistema de Pontuação do Evento</p>
             <p className="text-sm">
-              Todos os clubes iniciam com 1.910 pontos (pontuação máxima). Durante o evento, perdem pontos conforme não atendem aos critérios.
+              Todos os clubes iniciam com pontuação zero. Durante o evento, os pontos são atribuídos conforme os critérios são atendidos.
             </p>
           </div>
         </div>
@@ -1115,26 +1072,33 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Classificação:</span>
                 <span className={`text-xs px-2 py-1 rounded-full ${
-                  club.classification === "MISSIONÁRIO" 
+                  club.classification === "OURO" 
                     ? "bg-yellow-100 text-yellow-800"
-                    : club.classification === "VOLUNTÁRIO"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-orange-100 text-orange-800"
+                    : club.classification === "PRATA"
+                    ? "bg-gray-100 text-gray-800"
+                    : club.classification === "BRONZE"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-blue-100 text-blue-800"
                 }`}>
-                  {club.classification === "MISSIONÁRIO" ? (
+                  {club.classification === "OURO" ? (
                     <span className="flex items-center gap-1">
                       <Crown size={12} />
-                      MISSIONÁRIO
+                      OURO
                     </span>
-                  ) : club.classification === "VOLUNTÁRIO" ? (
+                  ) : club.classification === "PRATA" ? (
                     <span className="flex items-center gap-1">
                       <Trophy size={12} />
-                      VOLUNTÁRIO
+                      PRATA
+                    </span>
+                  ) : club.classification === "BRONZE" ? (
+                    <span className="flex items-center gap-1">
+                      <Star size={12} />
+                      BRONZE
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
-                      <Star size={12} />
-                      APRENDIZ
+                      <Target size={12} />
+                      PARTICIPAÇÃO
                     </span>
                   )}
                 </span>
@@ -1451,20 +1415,25 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                   {totalScore.toLocaleString()} pts
                 </div>
                 <div className="text-lg flex items-center gap-2 mt-2">
-                  {classification === "MISSIONÁRIO" ? (
+                  {classification === "OURO" ? (
                     <>
                       <Crown size={20} className="text-yellow-500" />
-                      MISSIONÁRIO
+                      OURO
                     </>
-                  ) : classification === "VOLUNTÁRIO" ? (
+                  ) : classification === "PRATA" ? (
                     <>
-                      <Trophy size={20} className="text-blue-300" />
-                      VOLUNTÁRIO
+                      <Trophy size={20} className="text-gray-500" />
+                      PRATA
+                    </>
+                  ) : classification === "BRONZE" ? (
+                    <>
+                      <Star size={20} className="text-orange-500" />
+                      BRONZE
                     </>
                   ) : (
                     <>
-                      <Star size={20} className="text-orange-500" />
-                      APRENDIZ
+                      <Target size={20} className="text-blue-500" />
+                      PARTICIPAÇÃO
                     </>
                   )}
                 </div>
@@ -1548,49 +1517,49 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <User size={20} />
               Cozinha
             </span>, 
-            "kitchen", (criteriaToUse as any).kitchen, currentScores.kitchen
+            "kitchen", criteriaToUse.kitchen, currentScores.kitchen
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <Users size={20} />
               Participação
             </span>, 
-            "participation", (criteriaToUse as any).participation, currentScores.participation
+            "participation", criteriaToUse.participation, currentScores.participation
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <Shield size={20} />
               Uniforme
             </span>, 
-            "uniform", (criteriaToUse as any).uniform, currentScores.uniform
+            "uniform", criteriaToUse.uniform, currentScores.uniform
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <FileText size={20} />
               Secretaria
             </span>, 
-            "secretary", (criteriaToUse as any).secretary, currentScores.secretary
+            "secretary", criteriaToUse.secretary, currentScores.secretary
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <Star size={20} />
               Eventos/Provas
             </span>, 
-            "events", (criteriaToUse as any).events, currentScores.events
+            "events", criteriaToUse.events, currentScores.events
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <Trophy size={20} />
               Bônus
             </span>, 
-            "bonus", (criteriaToUse as any).bonus, currentScores.bonus
+            "bonus", criteriaToUse.bonus, currentScores.bonus
           )}
           {renderScoreSection(
             <span className="flex items-center gap-2">
               <AlertTriangle size={20} className="text-red-500" />
               <span className="text-red-700">Deméritos</span>
             </span>, 
-            "demerits", (criteriaToUse as any).demerits, currentScores.demerits, true
+            "demerits", criteriaToUse.demerits, currentScores.demerits, true
           )}
         </div>
         
@@ -1614,29 +1583,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   };
 
   const renderEvaluation = () => {
-    return selectedClub ? (
-      <AdminScoringMobile
-        selectedClub={selectedClub}
-        editingScores={editingScores}
-        scoringCriteria={scoringCriteria}
-        adminEditMode={adminEditMode}
-        lockingCriteria={lockingCriteria}
-        onClose={() => {
-          setSelectedClub(null);
-          setEditingScores(null);
-          setAdminEditMode(false);
-          setActiveTab("clubs");
-        }}
-        onSave={handleSaveScores}
-        onEnableEditMode={enableAdminEditMode}
-        onSaveAdminChanges={saveAdminChanges}
-        updateScore={updateScore}
-        lockSingleCriteria={lockSingleCriteria}
-        isCriteriaEvaluated={isCriteriaEvaluated}
-        calculateTotalScore={calculateTotalScore}
-        getClassification={getClassification}
-      />
-    ) : (
+    return selectedClub ? renderEvaluationForm() : (
       <div className="space-y-6">
         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
           <div className="flex items-center">
@@ -1697,15 +1644,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Classificação:</span>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    club.classification === "MISSIONÁRIO" 
+                    club.classification === "OURO" 
                       ? "bg-yellow-100 text-yellow-800"
-                      : club.classification === "VOLUNTÁRIO"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-orange-100 text-orange-800"
+                      : club.classification === "PRATA"
+                      ? "bg-gray-100 text-gray-800"
+                      : club.classification === "BRONZE"
+                      ? "bg-orange-100 text-orange-800"
+                      : "bg-blue-100 text-blue-800"
                   }`}>
-                    {club.classification === "MISSIONÁRIO" ? "MISSIONÁRIO" : 
-                     club.classification === "VOLUNTÁRIO" ? "VOLUNTÁRIO" : 
-                     "APRENDIZ"}
+                    {club.classification === "OURO" ? "OURO" : 
+                     club.classification === "PRATA" ? "PRATA" : 
+                     club.classification === "BRONZE" ? "BRONZE" : "PARTICIPAÇÃO"}
                   </span>
                 </div>
                 
@@ -1779,9 +1728,9 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         <div className="bg-purple-50 p-6 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-yellow-600 text-sm font-medium">Clubes Missionários</p>
+              <p className="text-yellow-600 text-sm font-medium">Clubes Ouro</p>
               <p className="text-2xl font-bold text-yellow-900">
-                {classificationStats?.MISSIONÁRIO || 0}
+                {classificationStats?.OURO || 0}
               </p>
             </div>
             <div className="text-purple-500">
@@ -1799,22 +1748,29 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <div className="mb-2 text-yellow-600">
                 <Crown size={32} className="mx-auto" />
               </div>
-              <div className="text-2xl font-bold text-yellow-600">{classificationStats.MISSIONÁRIO}</div>
-              <div className="text-sm text-gray-600">MISSIONÁRIO</div>
+              <div className="text-2xl font-bold text-yellow-600">{classificationStats.OURO}</div>
+              <div className="text-sm text-gray-600">OURO</div>
             </div>
             <div className="text-center">
-              <div className="mb-2 text-blue-600">
+              <div className="mb-2 text-gray-600">
                 <Trophy size={32} className="mx-auto" />
               </div>
-              <div className="text-2xl font-bold text-blue-600">{classificationStats.VOLUNTÁRIO}</div>
-              <div className="text-sm text-gray-600">VOLUNTÁRIO</div>
+              <div className="text-2xl font-bold text-gray-600">{classificationStats.PRATA}</div>
+              <div className="text-sm text-gray-600">PRATA</div>
             </div>
             <div className="text-center">
               <div className="mb-2 text-orange-600">
-                <Star size={32} className="mx-auto" />
+                <Target size={32} className="mx-auto" />
               </div>
-              <div className="text-2xl font-bold text-orange-600">{classificationStats.APRENDIZ}</div>
-              <div className="text-sm text-gray-600">APRENDIZ</div>
+              <div className="text-2xl font-bold text-orange-600">{classificationStats.BRONZE}</div>
+              <div className="text-sm text-gray-600">BRONZE</div>
+            </div>
+            <div className="text-center">
+              <div className="mb-2 text-blue-600">
+                <Users size={32} className="mx-auto" />
+              </div>
+              <div className="text-2xl font-bold text-blue-600">{classificationStats.PARTICIPACAO}</div>
+              <div className="text-sm text-gray-600">PARTICIPAÇÃO</div>
             </div>
           </div>
         </div>
@@ -1883,10 +1839,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-orange-700 font-medium">Total de Missionários</p>
+                    <p className="text-sm text-orange-700 font-medium">Total de Ouro</p>
                     <p className="text-2xl font-bold text-orange-900">
                       {Object.keys(regionStats).length > 0 
-                        ? Object.values(regionStats).reduce((sum: number, stats: any) => sum + (stats.classifications?.MISSIONÁRIO || 0), 0)
+                        ? Object.values(regionStats).reduce((sum: number, stats: any) => sum + (stats.classifications?.OURO || 0), 0)
                         : 0
                       }
                     </p>
@@ -1909,9 +1865,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                   const maxScore = Math.max(...Object.values(regionStats).map((s: any) => s.averageScore));
                   const scorePercentage = (stats.averageScore / maxScore) * 100;
                   const totalClubs = stats.total;
-                  const missionarioPercentage = totalClubs > 0 ? (stats.classifications.MISSIONÁRIO / totalClubs) * 100 : 0;
-                  const voluntarioPercentage = totalClubs > 0 ? (stats.classifications.VOLUNTÁRIO / totalClubs) * 100 : 0;
-                  const aprendizPercentage = totalClubs > 0 ? (stats.classifications.APRENDIZ / totalClubs) * 100 : 0;
+                  const ouroPercentage = totalClubs > 0 ? (stats.classifications.OURO / totalClubs) * 100 : 0;
+                  const prataPercentage = totalClubs > 0 ? (stats.classifications.PRATA / totalClubs) * 100 : 0;
+                  const bronzePercentage = totalClubs > 0 ? (stats.classifications.BRONZE / totalClubs) * 100 : 0;
+                  const participacaoPercentage = totalClubs > 0 ? (stats.classifications.PARTICIPACAO / totalClubs) * 100 : 0;
 
                   return (
                     <div key={region} className="bg-white border-2 border-gray-100 rounded-xl p-5 hover:shadow-lg transition-shadow duration-300">
@@ -1950,54 +1907,71 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                       <div className="space-y-3">
                         <div className="text-sm font-medium text-gray-700 mb-2">Distribuição por Classificação</div>
                         
-                        {/* Missionário */}
+                        {/* Ouro */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Crown size={14} className="text-yellow-500" />
-                            <span className="text-xs text-gray-600">Missionário</span>
+                            <span className="text-xs text-gray-600">Ouro</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-1.5">
                               <div 
                                 className="bg-yellow-500 h-1.5 rounded-full"
-                                style={{ width: `${missionarioPercentage}%` }}
+                                style={{ width: `${ouroPercentage}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.MISSIONÁRIO}</span>
+                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.OURO}</span>
                           </div>
                         </div>
 
-                        {/* Voluntário */}
+                        {/* Prata */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Trophy size={14} className="text-blue-500" />
-                            <span className="text-xs text-gray-600">Voluntário</span>
+                            <Trophy size={14} className="text-gray-500" />
+                            <span className="text-xs text-gray-600">Prata</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-1.5">
                               <div 
-                                className="bg-blue-500 h-1.5 rounded-full"
-                                style={{ width: `${voluntarioPercentage}%` }}
+                                className="bg-gray-500 h-1.5 rounded-full"
+                                style={{ width: `${prataPercentage}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.VOLUNTÁRIO}</span>
+                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.PRATA}</span>
                           </div>
                         </div>
 
-                        {/* Aprendiz */}
+                        {/* Bronze */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Star size={14} className="text-orange-500" />
-                            <span className="text-xs text-gray-600">Aprendiz</span>
+                            <Target size={14} className="text-orange-500" />
+                            <span className="text-xs text-gray-600">Bronze</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-1.5">
                               <div 
                                 className="bg-orange-500 h-1.5 rounded-full"
-                                style={{ width: `${aprendizPercentage}%` }}
+                                style={{ width: `${bronzePercentage}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.APRENDIZ}</span>
+                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.BRONZE}</span>
+                          </div>
+                        </div>
+
+                        {/* Participacao */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users size={14} className="text-blue-500" />
+                            <span className="text-xs text-gray-600">Participação</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                              <div 
+                                className="bg-blue-500 h-1.5 rounded-full"
+                                style={{ width: `${participacaoPercentage}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-medium w-6 text-right">{stats.classifications.PARTICIPACAO}</span>
                           </div>
                         </div>
                       </div>
@@ -2072,11 +2046,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                   <div className="bg-white/10 backdrop-blur-sm p-4 rounded-lg">
                     <div className="text-2xl font-bold">
                       {Object.keys(regionStats).length > 0 
-                        ? Object.values(regionStats).reduce((sum: number, stats: any) => sum + (stats.classifications?.MISSIONÁRIO || 0), 0)
+                        ? Object.values(regionStats).reduce((sum: number, stats: any) => sum + (stats.classifications?.OURO || 0), 0)
                         : 0
                       }
                     </div>
-                    <div className="text-white/80 text-xs">Total de Missionários</div>
+                    <div className="text-white/80 text-xs">Total de Ouro</div>
                   </div>
                 </div>
               </div>
@@ -2106,7 +2080,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                           </div>
                           <div className="mt-3 text-center">
                             <div className="text-sm font-medium text-gray-700">{stats.total} clubes</div>
-                            <div className="text-xs text-gray-500">{stats.classifications.MISSIONÁRIO} missionários</div>
+                            <div className="text-xs text-gray-500">{stats.classifications.OURO} ouro</div>
                           </div>
                         </div>
                       );
@@ -2139,9 +2113,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                           <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Região</th>
                           <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pontuação Média</th>
                           <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Clubes</th>
-                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Missionário</th>
-                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Voluntário</th>
-                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aprendiz</th>
+                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ouro</th>
+                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Prata</th>
+                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bronze</th>
+                          <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Participação</th>
                           <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
                         </tr>
                       </thead>
@@ -2201,27 +2176,35 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                                 </div>
                               </td>
 
-                              {/* Missionário */}
+                              {/* Ouro */}
                               <td className="px-6 py-4 whitespace-nowrap text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <Crown size={16} className="text-yellow-500" />
-                                  <span className="font-semibold text-yellow-700">{(stats as any).classifications.MISSIONÁRIO}</span>
+                                  <span className="font-semibold text-yellow-700">{(stats as any).classifications.OURO}</span>
                                 </div>
                               </td>
 
-                              {/* Voluntário */}
+                              {/* Prata */}
                               <td className="px-6 py-4 whitespace-nowrap text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <Trophy size={16} className="text-blue-500" />
-                                  <span className="font-semibold text-blue-700">{(stats as any).classifications.VOLUNTÁRIO}</span>
+                                  <Trophy size={16} className="text-gray-500" />
+                                  <span className="font-semibold text-gray-700">{(stats as any).classifications.PRATA}</span>
                                 </div>
                               </td>
 
-                              {/* Aprendiz */}
+                              {/* Bronze */}
                               <td className="px-6 py-4 whitespace-nowrap text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <Star size={16} className="text-orange-500" />
-                                  <span className="font-semibold text-orange-700">{(stats as any).classifications.APRENDIZ}</span>
+                                  <Target size={16} className="text-orange-500" />
+                                  <span className="font-semibold text-orange-700">{(stats as any).classifications.BRONZE}</span>
+                                </div>
+                              </td>
+
+                              {/* Participação */}
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Users size={16} className="text-blue-500" />
+                                  <span className="font-semibold text-blue-700">{(stats as any).classifications.PARTICIPACAO}</span>
                                 </div>
                               </td>
 
@@ -2298,7 +2281,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                     Distribuição de Classificações
                   </h4>
                   <div className="space-y-4">
-                    {regionStats && ['MISSIONÁRIO', 'VOLUNTÁRIO', 'APRENDIZ'].map((classification) => {
+                    {regionStats && ['OURO', 'PRATA', 'BRONZE', 'PARTICIPACAO'].map((classification) => {
                       const total = Object.values(regionStats).reduce((sum: number, stats: any) => sum + stats.classifications[classification], 0);
                       const totalClubs = Object.values(regionStats).reduce((sum: number, stats: any) => sum + stats.total, 0);
                       const percentage = totalClubs > 0 ? (total / totalClubs) * 100 : 0;
@@ -2307,11 +2290,14 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                         <div key={classification} className="space-y-2">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                              {classification === 'MISSIONÁRIO' ? <Crown size={16} className="text-yellow-500" /> :
-                               classification === 'VOLUNTÁRIO' ? <Trophy size={16} className="text-blue-500" /> :
-                               <Star size={16} className="text-orange-500" />}
+                              {classification === 'OURO' ? <Crown size={16} className="text-yellow-500" /> :
+                               classification === 'PRATA' ? <Trophy size={16} className="text-gray-500" /> :
+                               classification === 'BRONZE' ? <Target size={16} className="text-orange-500" /> :
+                               <Users size={16} className="text-blue-500" />}
                               <span className="text-sm font-medium capitalize">
-                                {classification.toLowerCase()}
+                                {classification === 'PRATA' ? 'Prata' : 
+                                 classification === 'OURO' ? 'Ouro' : 
+                                 classification === 'BRONZE' ? 'Bronze' : 'Participação'}
                               </span>
                             </div>
                             <div className="text-sm font-bold">{total} ({percentage.toFixed(1)}%)</div>
@@ -2319,9 +2305,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
                               className={`h-2 rounded-full ${
-                                classification === 'MISSIONÁRIO' ? 'bg-yellow-500' :
-                                classification === 'VOLUNTÁRIO' ? 'bg-blue-500' :
-                                'bg-orange-500'
+                                classification === 'OURO' ? 'bg-yellow-500' :
+                                classification === 'PRATA' ? 'bg-gray-500' :
+                                classification === 'BRONZE' ? 'bg-orange-500' :
+                                'bg-blue-500'
                               }`}
                               style={{ width: `${percentage}%` }}
                             ></div>
@@ -2441,6 +2428,12 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           >
             + Novo Clube
           </button>
+          <button
+            onClick={handleResetClubsToMaxScore}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 whitespace-nowrap"
+          >
+            Inicializar Clubes
+          </button>
         </div>
       </div>
 
@@ -2502,13 +2495,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        club.classification === "MISSIONÁRIO" 
+                        club.classification === "OURO" 
                           ? "bg-yellow-100 text-yellow-800"
-                          : club.classification === "VOLUNTÁRIO"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-orange-100 text-orange-800"
+                          : club.classification === "PRATA"
+                          ? "bg-gray-100 text-gray-800"
+                          : club.classification === "BRONZE"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-blue-100 text-blue-800"
                       }`}>
-                        {club.classification}
+                        {club.classification === "OURO" ? "OURO" : 
+                         club.classification === "PRATA" ? "PRATA" : 
+                         club.classification === "BRONZE" ? "BRONZE" : "PARTICIPAÇÃO"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -2817,20 +2814,25 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                         {club.totalScore?.toLocaleString()} pts
                       </div>
                       <div className="flex items-center justify-end space-x-2 mt-1">
-                        {club.classification === "MISSIONÁRIO" ? (
+                        {club.classification === "OURO" ? (
                           <div className="flex items-center text-yellow-600 font-medium">
                             <Crown size={16} className="mr-1" />
-                            MISSIONÁRIO
+                            OURO
                           </div>
-                        ) : club.classification === "VOLUNTÁRIO" ? (
-                          <div className="flex items-center text-blue-600 font-medium">
+                        ) : club.classification === "PRATA" ? (
+                          <div className="flex items-center text-gray-600 font-medium">
                             <Trophy size={16} className="mr-1" />
-                            VOLUNTÁRIO
+                            PRATA
+                          </div>
+                        ) : club.classification === "BRONZE" ? (
+                          <div className="flex items-center text-orange-600 font-medium">
+                            <Target size={16} className="mr-1" />
+                            BRONZE
                           </div>
                         ) : (
-                          <div className="flex items-center text-orange-600 font-medium">
-                            <Star size={16} className="mr-1" />
-                            APRENDIZ
+                          <div className="flex items-center text-blue-600 font-medium">
+                            <Users size={16} className="mr-1" />
+                            PARTICIPAÇÃO
                           </div>
                         )}
                       </div>
@@ -2846,348 +2848,403 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   };
 
   const renderScoring = () => {
-    const categories = [
-      { 
-        id: 'prerequisites', 
-        name: 'Pré-requisitos', 
-        icon: <ClipboardList size={24} />,
-        color: 'bg-green-50 border-green-300',
-        iconBg: 'bg-green-100',
-        iconColor: 'text-green-600'
-      },
-      { 
-        id: 'campground', 
-        name: 'Área de Acampamento', 
-        icon: <Building2 size={24} />,
-        color: 'bg-orange-50 border-orange-300',
-        iconBg: 'bg-orange-100',
-        iconColor: 'text-orange-600'
-      },
-      { 
-        id: 'kitchen', 
-        name: 'Cozinha', 
-        icon: <ChefHat size={24} />,
-        color: 'bg-purple-50 border-purple-300',
-        iconBg: 'bg-purple-100',
-        iconColor: 'text-purple-600'
-      },
-      { 
-        id: 'participation', 
-        name: 'Participação', 
-        icon: <Users size={24} />,
-        color: 'bg-blue-50 border-blue-300',
-        iconBg: 'bg-blue-100',
-        iconColor: 'text-blue-600'
-      },
-      { 
-        id: 'uniform', 
-        name: 'Uniforme', 
-        icon: <Shield size={24} />,
-        color: 'bg-indigo-50 border-indigo-300',
-        iconBg: 'bg-indigo-100',
-        iconColor: 'text-indigo-600'
-      },
-      { 
-        id: 'secretary', 
-        name: 'Secretaria', 
-        icon: <FileText size={24} />,
-        color: 'bg-teal-50 border-teal-300',
-        iconBg: 'bg-teal-100',
-        iconColor: 'text-teal-600'
-      },
-      { 
-        id: 'events', 
-        name: 'Provas', 
-        icon: <Trophy size={24} />,
-        color: 'bg-yellow-50 border-yellow-300',
-        iconBg: 'bg-yellow-100',
-        iconColor: 'text-yellow-600'
-      },
-      { 
-        id: 'bonus', 
-        name: 'Bônus', 
-        icon: <Star size={24} />,
-        color: 'bg-pink-50 border-pink-300',
-        iconBg: 'bg-pink-100',
-        iconColor: 'text-pink-600'
-      },
-      { 
-        id: 'demerits', 
-        name: 'Deméritos', 
-        icon: <AlertTriangle size={24} />,
-        color: 'bg-red-50 border-red-300',
-        iconBg: 'bg-red-100',
-        iconColor: 'text-red-600'
-      }
-    ];
-
-    const openCreateModal = (categoryId: string) => {
-      setScoringSelectedCategory(categoryId);
-      setScoringModalMode('create');
-      setScoringFormData({ key: '', description: '', max: 0, partial: 0 });
-      setShowScoringModal(true);
-    };
-
-    const openEditModal = (categoryId: string, criterionKey: string, criterion: any) => {
-      setScoringSelectedCategory(categoryId);
-      setScoringModalMode('edit');
-      setEditingCriterionKey(criterionKey);
-      setScoringFormData({
-        key: criterionKey,
-        description: criterion.description,
-        max: criterion.max || 0,
-        partial: criterion.partial || 0
-      });
-      setShowScoringModal(true);
-    };
-
-    const handleSaveCriterion = async () => {
-      if (!scoringFormData.description || !scoringSelectedCategory) {
-        toast.error("Preencha todos os campos obrigatórios");
-        return;
-      }
-
-      if (scoringModalMode === 'create' && !scoringFormData.key) {
-        toast.error("A chave do requisito é obrigatória");
-        return;
-      }
-
-      try {
-        if (scoringModalMode === 'create') {
-          await createScoringCriterion({
-            category: scoringSelectedCategory,
-            key: scoringFormData.key,
-            description: scoringFormData.description,
-            max: scoringFormData.max,
-            partial: scoringFormData.partial,
-            adminId: user._id,
-          });
-          toast.success('Requisito criado com sucesso!');
-        } else {
-          await updateScoringCriterion({
-            category: scoringSelectedCategory,
-            key: editingCriterionKey,
-            description: scoringFormData.description,
-            max: scoringFormData.max,
-            partial: scoringFormData.partial,
-            adminId: user._id,
-          });
-          toast.success('Requisito atualizado com sucesso!');
-        }
-        setShowScoringModal(false);
-      } catch (error: any) {
-        toast.error(error.message);
-      }
-    };
-
-    const handleResetCriteria = async () => {
-      if (confirm('Tem certeza que deseja resetar todos os requisitos para os valores padrões?')) {
-        try {
-          await resetScoringCriteria({ adminId: user._id });
-          toast.success('Requisitos resetados para valores padrões!');
-        } catch (error: any) {
-          toast.error(error.message);
-        }
-      }
-    };
-
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Sistema de Pontuação - XXI Campori Paulistana</h2>
-          
-          {/* Botão Reset */}
-          <button
-            onClick={handleResetCriteria}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <RotateCcw size={16} />
-            Resetar para Padrão
-          </button>
         </div>
 
-        {/* Banner Info */}
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
           <div className="flex items-center">
-            <Info size={16} className="text-blue-600 mr-2" />
-            <div className="text-blue-800">
+            <Info size={16} className="text-green-600 mr-2" />
+            <div className="text-green-800">
               <p className="font-medium">XXI Campori Paulistana - "Até os Confins da Terra"</p>
               <p className="text-sm">
-                Sistema de pontuação oficial com 1.910 pontos totais. Classificações: MISSIONÁRIO (≥1496), VOLUNTÁRIO (1232-1495), APRENDIZ (≤1231).
+                Sistema de pontuação oficial com 1.950 pontos totais. Classificações: OURO (≥1500), PRATA (≥1000), BRONZE (≥500), PARTICIPAÇÃO (&lt;500).
               </p>
             </div>
           </div>
         </div>
 
-        {/* Grid de Categorias */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map((category) => {
-            const categoryData = scoringCriteria?.[category.id] || {};
-            const criteriaCount = Object.keys(categoryData).length;
-            const totalPoints = Object.values(categoryData).reduce((sum: number, item: any) => 
-              sum + (item.max || 0), 0
-            );
-
-            return (
-              <div key={category.id} className={`${category.color} border-2 rounded-xl p-5 hover:shadow-md transition-all`}>
-                {/* Header do Card */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`${category.iconBg} p-3 rounded-lg`}>
-                    <span className={category.iconColor}>{category.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900">{category.name}</h3>
-                    <p className="text-xs text-gray-600">
-                      {criteriaCount} {criteriaCount === 1 ? 'requisito' : 'requisitos'} • {totalPoints} pts
-                    </p>
-                  </div>
+        <div className="space-y-4">
+          {/* Grid responsivo - 1 coluna no mobile, 2 no tablet, 3 no desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* PRÉ-REQUISITOS */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <ClipboardList size={20} className="text-green-600" />
                 </div>
-
-                {/* Lista de Requisitos */}
-                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                  {Object.entries(categoryData).map(([key, criterion]: [string, any]) => (
-                    <div key={key} className="bg-white/60 p-2 rounded-lg text-xs">
-                      <div className="flex justify-between items-start gap-2">
-                        <p className="text-gray-800 flex-1">{criterion.description}</p>
-                        <button
-                          onClick={() => openEditModal(category.id, key, criterion)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <Settings size={14} />
-                        </button>
-                      </div>
-                      <p className="text-gray-500 mt-1">
-                        Max: {criterion.max}pts
-                        {criterion.partial > 0 && ` • Parcial: ${criterion.partial}pts`}
-                      </p>
-                    </div>
-                  ))}
+                <div>
+                  <h3 className="font-semibold text-gray-800">Pré-requisitos</h3>
+                  <p className="text-sm text-gray-500">30 pontos</p>
                 </div>
-
-                {/* Botão Adicionar */}
-                <button
-                  onClick={() => openCreateModal(category.id)}
-                  className="w-full bg-white/80 hover:bg-white text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 border border-gray-300"
-                >
-                  <span className="text-xl">+</span>
-                  Novo Requisito
-                </button>
               </div>
-            );
-          })}
-        </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Requisitos obrigatórios para participação no evento
+              </p>
+              <button 
+                onClick={() => setActiveCategory('prerequisites')}
+                className="w-full bg-green-50 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
 
-        {/* Modal de Criar/Editar */}
-        {showScoringModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">
-                  {scoringModalMode === 'create' ? 'Novo Requisito' : 'Editar Requisito'}
+            {/* ÁREA DE ACAMPAMENTO */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Building2 size={20} className="text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Área de Acampamento</h3>
+                  <p className="text-sm text-gray-500">280 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Organização, estrutura e segurança do acampamento
+              </p>
+              <button 
+                onClick={() => setActiveCategory('campground')}
+                className="w-full bg-orange-50 text-orange-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-orange-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* COZINHA */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <ChefHat size={20} className="text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Cozinha</h3>
+                  <p className="text-sm text-gray-500">240 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Higiene, segurança e organização da cozinha
+              </p>
+              <button 
+                onClick={() => setActiveCategory('kitchen')}
+                className="w-full bg-purple-50 text-purple-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-purple-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* PARTICIPAÇÃO */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users size={20} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Participação</h3>
+                  <p className="text-sm text-gray-500">420 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Presença nas programações e reuniões
+              </p>
+              <button 
+                onClick={() => setActiveCategory('participation')}
+                className="w-full bg-blue-50 text-blue-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* UNIFORME */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <Shield size={20} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Uniforme</h3>
+                  <p className="text-sm text-gray-500">120 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Uniformização e bandeirins das unidades
+              </p>
+              <button 
+                onClick={() => setActiveCategory('uniform')}
+                className="w-full bg-indigo-50 text-indigo-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* SECRETARIA */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-teal-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-teal-100 rounded-lg">
+                  <FileText size={20} className="text-teal-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Secretaria</h3>
+                  <p className="text-sm text-gray-500">300 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Documentação e primeiros socorros
+              </p>
+              <button 
+                onClick={() => setActiveCategory('secretary')}
+                className="w-full bg-teal-50 text-teal-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-teal-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* PROVAS */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Trophy size={20} className="text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Provas</h3>
+                  <p className="text-sm text-gray-500">350 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Carrossel de aventura e atividades extras
+              </p>
+              <button 
+                onClick={() => setActiveCategory('events')}
+                className="w-full bg-yellow-50 text-yellow-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-yellow-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* BÔNUS */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Star size={20} className="text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Bônus</h3>
+                  <p className="text-sm text-gray-500">150 pontos</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Pontuação adicional por critérios especiais
+              </p>
+              <button 
+                onClick={() => setActiveCategory('bonus')}
+                className="w-full bg-emerald-50 text-emerald-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+            {/* DEMÉRITOS */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">Deméritos</h3>
+                  <p className="text-sm text-gray-500">Penalidades</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Infrações e penalizações aplicadas
+              </p>
+              <button 
+                onClick={() => setActiveCategory('demerits')}
+                className="w-full bg-red-50 text-red-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+              >
+                Gerenciar
+              </button>
+            </div>
+
+          </div>
+
+          {/* Interface de Categoria Específica */}
+          {activeCategory && (
+            <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-blue-200">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800">
+                  {activeCategory === 'prerequisites' && 'Pré-requisitos'}
+                  {activeCategory === 'campground' && 'Área de Acampamento'}
+                  {activeCategory === 'kitchen' && 'Cozinha'}
+                  {activeCategory === 'participation' && 'Participação'}
+                  {activeCategory === 'uniform' && 'Uniforme'}
+                  {activeCategory === 'secretary' && 'Secretaria'}
+                  {activeCategory === 'events' && 'Provas'}
+                  {activeCategory === 'bonus' && 'Bônus'}
+                  {activeCategory === 'demerits' && 'Deméritos'}
                 </h3>
                 <button
-                  onClick={() => setShowScoringModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => setActiveCategory(null)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                {/* Categoria */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Categoria
-                  </label>
-                  <input
-                    type="text"
-                    value={categories.find(c => c.id === scoringSelectedCategory)?.name || ''}
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                  />
-                </div>
+              {/* Seletor de Clube */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Selecione o Clube para Avaliar
+                </label>
+                <select
+                  value={selectedClubForScoring}
+                  onChange={(e) => setSelectedClubForScoring(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione um clube...</option>
+                  {clubs?.map((club) => (
+                    <option key={club._id} value={club._id}>
+                      {club.name} - {club.region}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {/* Key (somente na criação) */}
-                {scoringModalMode === 'create' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Chave (identificador único) *
-                    </label>
-                    <input
-                      type="text"
-                      value={scoringFormData.key}
-                      onChange={(e) => setScoringFormData({...scoringFormData, key: e.target.value})}
-                      placeholder="ex: directorPresence"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Use camelCase sem espaços</p>
+              {/* Conteúdo específico da categoria */}
+              {selectedClubForScoring && scoringCriteria && (
+                <div className="space-y-4">
+                  {activeCategory && scoringCriteria[activeCategory] && 
+                    Object.entries(scoringCriteria[activeCategory]).map(([key, item]: [string, any], index) => (
+                      <div key={key} className="border border-gray-200 p-4 rounded-lg bg-gray-50">
+                        <div className="flex flex-col gap-4">
+                          {/* Cabeçalho do item */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
+                                  Item {index + 1}
+                                </span>
+                                {activeCategory === 'demerits' && (
+                                  <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">
+                                    PENALIDADE
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
+                                {item.description}
+                              </h4>
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {activeCategory === 'demerits' ? (
+                                  <span className="bg-red-50 text-red-700 px-2 py-1 rounded border border-red-200">
+                                    <strong>Penalidade:</strong> -{item.penalty} pontos por ocorrência
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200">
+                                      <strong>Máximo:</strong> {item.max} pts
+                                    </span>
+                                    {item.partial !== undefined && item.partial > 0 && (
+                                      <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-200">
+                                        <strong>Parcial:</strong> {item.partial} pts
+                                      </span>
+                                    )}
+                                    {item.partial === 0 && (
+                                      <span className="bg-gray-50 text-gray-600 px-2 py-1 rounded border border-gray-200">
+                                        <strong>Sem pontuação parcial</strong>
+                                      </span>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Botões de pontuação */}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {activeCategory === 'demerits' ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  className="px-3 py-2 border border-gray-300 rounded-lg text-center w-20"
+                                />
+                                <span className="flex items-center text-sm text-gray-600">
+                                  × (-{item.penalty} pts)
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                <button className="bg-red-50 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors border border-red-200">
+                                  0 pts
+                                </button>
+                                {item.partial !== undefined && item.partial > 0 && (
+                                  <button className="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-100 transition-colors border border-yellow-200">
+                                    {item.partial} pts
+                                  </button>
+                                )}
+                                <button className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors border border-green-200">
+                                  {item.max} pts
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  
+                  {/* Resumo da categoria */}
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold text-blue-900 mb-1">
+                          Resumo da Categoria
+                        </h4>
+                        <p className="text-sm text-blue-700">
+                          {activeCategory && scoringCriteria[activeCategory] && 
+                            `${Object.keys(scoringCriteria[activeCategory]).length} itens de avaliação`
+                          }
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-blue-900">0 pts</div>
+                        <div className="text-xs text-blue-600">Pontuação atual</div>
+                      </div>
+                    </div>
                   </div>
-                )}
-
-                {/* Descrição */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descrição *
-                  </label>
-                  <textarea
-                    value={scoringFormData.description}
-                    onChange={(e) => setScoringFormData({...scoringFormData, description: e.target.value})}
-                    placeholder="Descreva o requisito..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                    <button className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                      Limpar Tudo
+                    </button>
+                    <button className="flex-1 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium">
+                      Salvar Pontuação
+                    </button>
+                  </div>
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* Pontuação Máxima */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pontuação Máxima *
-                  </label>
-                  <input
-                    type="number"
-                    value={scoringFormData.max}
-                    onChange={(e) => setScoringFormData({...scoringFormData, max: parseInt(e.target.value) || 0})}
-                    placeholder="0"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
+          {/* Resumo Mobile-Friendly */}
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Info size={16} className="text-blue-600 mt-1 flex-shrink-0" />
+              <div className="text-blue-800">
+                <p className="font-medium text-sm">Total: 1.950 pontos possíveis</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-xs">
+                  <span className="bg-white/50 px-2 py-1 rounded">OURO: ≥1500</span>
+                  <span className="bg-white/50 px-2 py-1 rounded">PRATA: ≥1000</span>
+                  <span className="bg-white/50 px-2 py-1 rounded">BRONZE: ≥500</span>
+                  <span className="bg-white/50 px-2 py-1 rounded">PARTICIPAÇÃO: &lt;500</span>
                 </div>
-
-                {/* Pontuação Parcial */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pontuação Parcial (opcional)
-                  </label>
-                  <input
-                    type="number"
-                    value={scoringFormData.partial}
-                    onChange={(e) => setScoringFormData({...scoringFormData, partial: parseInt(e.target.value) || 0})}
-                    placeholder="0"
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowScoringModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveCriterion}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Salvar
-                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -3361,7 +3418,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           <div className="border border-green-200 p-4 rounded-lg">
             <h4 className="font-semibold text-green-700 mb-2">Inicialização</h4>
             <p className="text-sm text-gray-600 mb-3">
-              Ferramentas para resetar pontuação dos clubes para o valor máximo (1910 pontos).
+              Ferramentas para resetar pontuação dos clubes para o valor máximo (3050 pontos).
             </p>
             <div className="space-y-2">
               <button
@@ -3376,12 +3433,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 className="w-full bg-emerald-500 text-white px-4 py-2 rounded hover:bg-emerald-600 text-sm"
               >
                 Corrigir Classificações Iniciais
-              </button>
-              <button
-                onClick={handleImportClubs}
-                className="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 text-sm flex items-center justify-center gap-2"
-              >
-                📥 Importar Clubes (JSON)
               </button>
             </div>
           </div>
@@ -3412,9 +3463,9 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           </div>
           <div className="text-center p-4 bg-yellow-50 rounded-lg">
             <div className="text-2xl font-bold text-yellow-600">
-              {classificationStats?.MISSIONÁRIO || 0}
+              {classificationStats?.OURO || 0}
             </div>
-            <div className="text-sm text-yellow-800">Clubes Missionários</div>
+            <div className="text-sm text-yellow-800">Clubes Ouro</div>
           </div>
         </div>
       </div>
@@ -3423,17 +3474,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       <div className="bg-green-50 border border-green-200 p-6 rounded-xl">
         <h3 className="text-lg font-semibold mb-4 text-green-800 flex items-center gap-2">
           <Lightbulb size={20} />
-          Sistema de Pontuação por Dedução
+          Sistema de Pontuação Aditivo
         </h3>
         <div className="space-y-3 text-green-800">
           <p className="text-sm">
-            <strong>Funcionamento:</strong> Todos os clubes iniciam com 1.910 pontos (pontuação máxima).
+            <strong>Funcionamento:</strong> Todos os clubes iniciam com pontuação zero.
           </p>
           <p className="text-sm">
-            <strong>Durante o evento:</strong> Pontos são deduzidos conforme os clubes não atendem aos critérios estabelecidos.
+            <strong>Durante o evento:</strong> Os pontos são atribuídos conforme os critérios são atendidos e avaliados.
           </p>
           <p className="text-sm">
-            <strong>Objetivo:</strong> Incentivar os clubes a atenderem o máximo de critérios possível para manter a pontuação alta.
+            <strong>Objetivo:</strong> Recompensar os clubes pelos critérios que conseguem atender durante o evento.
           </p>
         </div>
       </div>
@@ -3668,4 +3719,22 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       </div>
     </div>
   );
+  } catch (error) {
+    console.error("AdminDashboard: Error rendering component", error);
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Erro no AdminDashboard</h2>
+          <p className="text-gray-600 mb-4">Ocorreu um erro ao carregar o painel.</p>
+          <pre className="text-sm bg-gray-100 p-4 rounded">{String(error)}</pre>
+          <button 
+            onClick={onLogout}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Voltar ao Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 }

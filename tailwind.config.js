@@ -18,6 +18,7 @@ module.exports = {
         hover: "0 2px 8px rgba(0, 0, 0, 0.12)",
       },
       colors: {
+        // Cores originais mantidas para compatibilidade
         primary: {
           DEFAULT: "#4F46E5",
           hover: "#4338CA",
@@ -29,6 +30,20 @@ module.exports = {
         accent: {
           DEFAULT: "#8B5CF6",
           hover: "#7C3AED",
+        },
+        // Nova paleta Campori Paulistana
+        campori: {
+          navy: "#023E73",      // Azul marinho principal
+          darkGreen: "#0F402E", // Verde escuro
+          green: "#025918",     // Verde médio
+          brown: "#733702",     // Marrom/dourado
+          darkRed: "#260707",   // Vermelho escuro/bordô
+          // Variações para hover e estados
+          navyHover: "#034a8c",
+          darkGreenHover: "#1a5a42",
+          greenHover: "#037020",
+          brownHover: "#8a4203",
+          darkRedHover: "#3a0a0a",
         },
       },
       spacing: {

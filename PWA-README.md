@@ -1,6 +1,6 @@
 # 📱 PWA - Progressive Web App
 
-## XXVII AVENTURI - AP HERÓIS DE JESUS
+## XXI CAMPORI PAULISTANA - ATÉ OS CONFINS DA TERRA
 
 O sistema agora funciona como um **Progressive Web App (PWA)**, permitindo instalação e uso offline em dispositivos móveis e desktop.
 
@@ -25,7 +25,7 @@ O sistema agora funciona como um **Progressive Web App (PWA)**, permitindo insta
 #### **Manifest.json**
 ```json
 {
-  "name": "XXVII AVENTURI - AP HERÓIS DE JESUS",
+  "name": "XXI CAMPORI PAULISTANA - ATÉ OS CONFINS DA TERRA",
   "short_name": "Aventuri 2025",
   "display": "standalone",
   "theme_color": "#3b82f6",

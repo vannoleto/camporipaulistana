@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { Crown, Globe, Building2, UserCheck, Zap, ArrowLeft, Lock, User, Key, Sparkles, MapPin, Users, Eye, EyeOff } from "lucide-react";
-import aventuriLogo from "../aventuri.png";
+import camporiLogo from "../campori.png";
 
 // Adicionar animações CSS inline
 const animationStyles = `
@@ -190,7 +190,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
             type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-400 focus:border-red-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-darkRed focus:border-campori-darkRed transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
             placeholder="••••••••"
             required
           />
@@ -207,7 +207,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
       
       <button
         type="submit"
-        className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-6 rounded-2xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+        className="w-full bg-gradient-to-r from-campori-darkRed to-campori-brown text-white py-4 px-6 rounded-2xl hover:from-campori-darkRedHover hover:to-campori-brownHover transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
       >
         <Crown size={20} />
         <span>Entrar como Administrador</span>
@@ -232,7 +232,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-navy focus:border-campori-navy transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
             placeholder="Digite seu nome"
             required
           />
@@ -248,7 +248,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+              className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-navy focus:border-campori-navy transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
               placeholder="••••••••"
               required
             />
@@ -264,7 +264,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-6 rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+          className="w-full bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white py-4 px-6 rounded-2xl hover:from-campori-navyHover hover:to-campori-darkGreenHover transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
         >
           <UserCheck size={20} />
           <span>Entrar</span>
@@ -333,7 +333,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+              className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-green focus:border-campori-green transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
               placeholder="Crie uma senha segura"
               required
             />
@@ -356,7 +356,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
             <select
               value={formData.region}
               onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-green focus:border-campori-green transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
               required
             >
               <option value="">Selecione sua região</option>
@@ -419,7 +419,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
                 <select
                   value={formData.clubName}
                   onChange={(e) => setFormData({ ...formData, clubName: e.target.value })}
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-campori-green focus:border-campori-green transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
                   required
                 >
                   <option value="">Selecione seu clube</option>
@@ -439,7 +439,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-2xl hover:from-green-600 hover:to-green-700 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
+          className="w-full bg-gradient-to-r from-campori-green to-campori-darkGreen text-white py-4 px-6 rounded-2xl hover:from-campori-greenHover hover:to-campori-darkGreenHover transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
         >
           <UserCheck size={20} />
           <span>Finalizar Cadastro</span>
@@ -449,7 +449,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-campori-navy via-campori-darkGreen to-campori-green flex flex-col relative overflow-hidden">
       
       {/* Background Effects */}
       <div className="absolute inset-0">
@@ -465,14 +465,15 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
           <div className="mb-6 relative">
             <div className="absolute inset-0 bg-white/20 rounded-full blur-lg transform scale-110"></div>
             <img 
-              src={aventuriLogo} 
-              alt="Logo XXVII Aventuri - AP Heróis de Jesus" 
-              className="relative w-24 h-24 mx-auto object-contain drop-shadow-xl"
+              src={camporiLogo} 
+              alt="Logo XXI Campori da Paulistana - Até os Confins da Terra" 
+              className="relative w-32 h-32 mx-auto object-contain drop-shadow-xl"
             />
           </div>
-          <h1 className="text-2xl font-bold mb-2 tracking-wide">XXVII AVENTURI</h1>
-          <p className="text-lg opacity-90 font-medium">AP HERÓIS DE JESUS</p>
-          <p className="text-sm opacity-75 mt-2">26 a 28 de setembro de 2025 | Sumaré - SP</p>
+          <h1 className="text-2xl font-bold mb-2 tracking-wide">XXI CAMPORI</h1>
+          <p className="text-lg opacity-90 font-medium">PAULISTANA</p>
+          <p className="text-base opacity-90 font-semibold mt-2 text-yellow-200">"ATÉ OS CONFINS DA TERRA"</p>
+          <p className="text-sm opacity-75 mt-2">20 a 23 de novembro de 2025 | UNASP - Engenheiro Coelho - SP</p>
         </div>
       </div>
 
@@ -522,7 +523,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
                 Sistema de Pontuação Digital
               </p>
               <p className="text-white/40 text-xs mt-1">
-                Desenvolvido para o XXVII Aventuri
+                Desenvolvido para o XXI Campori da Paulistana
               </p>
             </div>
           </div>

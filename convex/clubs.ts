@@ -117,26 +117,27 @@ const createInitialScoreStructure = (criteria: any) => {
 
 // Função para calcular pontuação total
 const calculateTotalScore = (scores: any) => {
-  if (!scores) return 0;
+  if (!scores) return 1910; // Pontuação máxima inicial do Campori
 
-  let totalScore = 0;
+  const MAX_SCORE = 1910;
+  let penalties = 0;
 
-  // Somar pontuações de cada categoria
+  // Calcular penalidades (pontos perdidos) por cada categoria
   if (scores.prerequisites) {
     Object.values(scores.prerequisites).forEach((value: any) => {
-      totalScore += Math.abs(value || 0);
+      penalties += Math.abs(value || 0);
     });
   }
 
   if (scores.participation) {
     Object.values(scores.participation).forEach((value: any) => {
-      totalScore += Math.abs(value || 0);
+      penalties += Math.abs(value || 0);
     });
   }
 
   if (scores.general) {
     Object.values(scores.general).forEach((value: any) => {
-      totalScore += Math.abs(value || 0);
+      penalties += Math.abs(value || 0);
     });
   }
 
@@ -144,34 +145,35 @@ const calculateTotalScore = (scores: any) => {
     Object.entries(scores.events).forEach(([key, value]: [string, any]) => {
       if (key === 'carousel') {
         Object.values(value).forEach((carouselValue: any) => {
-          totalScore += Math.abs(carouselValue || 0);
+          penalties += Math.abs(carouselValue || 0);
         });
       } else {
-        totalScore += Math.abs(value || 0);
+        penalties += Math.abs(value || 0);
       }
     });
   }
 
   if (scores.bonus) {
     Object.values(scores.bonus).forEach((value: any) => {
-      totalScore += Math.abs(value || 0);
+      penalties += Math.abs(value || 0);
     });
   }
 
-  // Deméritos são subtraídos (valores positivos representam penalidades)
+  // Deméritos são penalidades adicionais
   if (scores.demerits) {
     Object.values(scores.demerits).forEach((value: any) => {
-      totalScore -= (value || 0);
+      penalties += Math.abs(value || 0);
     });
   }
 
-  return Math.max(0, totalScore);
+  // Pontuação final = Máximo (1910) - Penalidades
+  return Math.max(0, MAX_SCORE - penalties);
 };
 
-// Função para determinar classificação
+// Função para determinar classificação (Campori Paulistana 2025)
 const getClassification = (totalScore: number): string => {
-  if (totalScore >= 2300) return "HEROI";
-  if (totalScore >= 1100) return "FIEL_ESCUDEIRO";
+  if (totalScore >= 1496) return "MISSIONÁRIO";
+  if (totalScore >= 1232) return "VOLUNTÁRIO";
   return "APRENDIZ";
 };
 
@@ -492,41 +494,42 @@ export const resetAllClubScores = mutation({
     const clubs = await ctx.db.query("clubs").collect();
     let updatedCount = 0;
 
-    // Criar estrutura de pontuação máxima seguindo o schema exato
+    // Sistema de DEDUÇÃO: clubes iniciam com 1910 pts (sem penalidades)
+    // Valores zerados = pontuação máxima (1910 pontos)
     const maxScores = {
       prerequisites: {
-        photos: 300,
-        directorPresence: 50,
+        photos: 0,
+        directorPresence: 0,
       },
       participation: {
-        opening: 100,
-        saturdayMorning: 100,
-        saturdayNight: 100,
-        saturdayMeeting: 50,
-        sundayMeeting: 50,
+        opening: 0,
+        saturdayMorning: 0,
+        saturdayNight: 0,
+        saturdayMeeting: 0,
+        sundayMeeting: 0,
       },
       general: {
-        firstAidKit: 300,
-        secretaryFolder: 500,
-        doorIdentification: 200,
-        badges: 200,
-        uniform: 100,
+        firstAidKit: 0,
+        secretaryFolder: 0,
+        doorIdentification: 0,
+        badges: 0,
+        uniform: 0,
       },
       events: {
-        twelveHour: 100,
+        twelveHour: 0,
         carousel: {
-          abel: 100,
-          jacob: 100,
-          samson: 100,
-          rahab: 100,
-          gideon: 100,
-          barak: 100,
+          abel: 0,
+          jacob: 0,
+          samson: 0,
+          rahab: 0,
+          gideon: 0,
+          barak: 0,
         },
       },
       bonus: {
-        pastorVisit: 100,
-        adultVolunteer: 100,
-        healthProfessional: 100,
+        pastorVisit: 0,
+        adultVolunteer: 0,
+        healthProfessional: 0,
       },
       demerits: {
         driverIssues: 0,
@@ -564,11 +567,11 @@ export const resetAllClubScores = mutation({
       userName: "Sistema",
       userRole: "system",
       action: "system_reset",
-      details: `Sistema resetado: ${updatedCount} clubes resetados para pontuação máxima (3050 pts). Históricos anteriores foram limpos.`,
+      details: `Sistema resetado: ${updatedCount} clubes resetados para pontuação máxima (1910 pts). Históricos anteriores foram limpos.`,
       timestamp: Date.now(),
     });
 
-    return `Reset concluído! ${updatedCount} clubes foram resetados para pontuação máxima (3050 pontos). Históricos limpos.`;
+    return `Reset concluído! ${updatedCount} clubes foram resetados para pontuação máxima (1910 pontos). Históricos limpos.`;
   },
 });
 
@@ -875,14 +878,86 @@ export const createClub = mutation({
       throw new Error("Já existe um clube com este nome");
     }
 
-    // Buscar critérios de pontuação atuais
-    const criteria = await ctx.runQuery(api.scoring.getScoringCriteria, {});
-    if (!criteria) {
-      throw new Error("Critérios de pontuação não encontrados. Configure os critérios primeiro.");
-    }
+    // Sistema de DEDUÇÃO: clubes começam com pontuação máxima (1910 pts)
+    // Scores zerados = sem penalidades = 1910 pontos
+    const initialScores = {
+      prerequisites: {
+        directorPresence: 0,
+      },
+      campground: {
+        portal: 0,
+        clothesline: 0,
+        pioneers: 0,
+        campfireArea: 0,
+        materials: 0,
+        tentOrganization: 0,
+        security: 0,
+        readyCamp: 0,
+        chairsOrBench: 0,
+      },
+      kitchen: {
+        tentSetup: 0,
+        identification: 0,
+        tentSize: 0,
+        gasRegister: 0,
+        firePosition: 0,
+        refrigerator: 0,
+        tables: 0,
+        extinguisher: 0,
+        menu: 0,
+        menuDisplay: 0,
+        containers: 0,
+        uniform: 0,
+        handSanitizer: 0,
+        washBasin: 0,
+        cleaning: 0,
+        water: 0,
+        identification2: 0,
+      },
+      participation: {
+        opening: 0,
+        saturdayMorning: 0,
+        saturdayEvening: 0,
+        sundayMorning: 0,
+        saturdayAfternoon: 0,
+        sundayEvening: 0,
+        directorMeetingFriday: 0,
+        directorMeetingSaturday: 0,
+      },
+      uniform: {
+        programmedUniform: 0,
+        badges: 0,
+      },
+      secretary: {
+        firstAidKit: 0,
+        secretaryFolder: 0,
+        healthFolder: 0,
+      },
+      events: {
+        carousel: 0,
+        extraActivities: 0,
+        representative: 0,
+      },
+      bonus: {
+        pastorVisit: 0,
+        healthProfessional: 0,
+      },
+      demerits: {
+        noIdentification: 0,
+        unaccompanied: 0,
+        inappropriate: 0,
+        campingActivity: 0,
+        interference: 0,
+        improperClothing: 0,
+        disrespect: 0,
+        improperBehavior: 0,
+        substances: 0,
+        sexOpposite: 0,
+        artificialFires: 0,
+        unauthorizedVehicles: 0,
+      },
+    };
 
-    // Criar estrutura de pontuações inicial (zero)
-    const initialScores = createInitialScoreStructure(criteria);
     const totalScore = calculateTotalScore(initialScores);
     const classification = getClassification(totalScore);
 
@@ -1106,4 +1181,154 @@ export const generateClubQRData = query({
       type: "club_qr"
     };
   }
+});
+
+// Função para importar múltiplos clubes de uma vez
+export const importClubsBatch = mutation({
+  args: {
+    clubs: v.array(v.object({
+      name: v.string(),
+      region: v.string(),
+      registeredMembers: v.number(),
+    })),
+    adminId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const admin = await ctx.db.get(args.adminId);
+    if (!admin || admin.role !== "admin") {
+      throw new Error("Apenas administradores podem importar clubes");
+    }
+
+    // Estrutura inicial de scores completa (conforme schema - tudo zerado = 1910 pontos)
+    const initialScores = {
+      prerequisites: {
+        directorPresence: 0,
+      },
+      campground: {
+        portal: 0,
+        clothesline: 0,
+        pioneers: 0,
+        campfireArea: 0,
+        materials: 0,
+        tentOrganization: 0,
+        security: 0,
+        readyCamp: 0,
+        chairsOrBench: 0,
+      },
+      kitchen: {
+        tentSetup: 0,
+        identification: 0,
+        tentSize: 0,
+        gasRegister: 0,
+        firePosition: 0,
+        refrigerator: 0,
+        tables: 0,
+        extinguisher: 0,
+        menu: 0,
+        menuDisplay: 0,
+        containers: 0,
+        uniform: 0,
+        handSanitizer: 0,
+        washBasin: 0,
+        cleaning: 0,
+        water: 0,
+        identification2: 0,
+      },
+      participation: {
+        opening: 0,
+        saturdayMorning: 0,
+        saturdayEvening: 0,
+        sundayMorning: 0,
+        saturdayAfternoon: 0,
+        sundayEvening: 0,
+        directorMeetingFriday: 0,
+        directorMeetingSaturday: 0,
+      },
+      uniform: {
+        programmedUniform: 0,
+        badges: 0,
+      },
+      secretary: {
+        firstAidKit: 0,
+        secretaryFolder: 0,
+        healthFolder: 0,
+      },
+      events: {
+        carousel: 0,
+        extraActivities: 0,
+        representative: 0,
+      },
+      bonus: {
+        pastorVisit: 0,
+        healthProfessional: 0,
+      },
+      demerits: {
+        noIdentification: 0,
+        unaccompanied: 0,
+        inappropriate: 0,
+        campingActivity: 0,
+        interference: 0,
+        improperClothing: 0,
+        disrespect: 0,
+        improperBehavior: 0,
+        substances: 0,
+        sexOpposite: 0,
+        artificialFires: 0,
+        unauthorizedVehicles: 0,
+      },
+    };
+
+    let createdCount = 0;
+    let skippedCount = 0;
+    const results = [];
+
+    for (const club of args.clubs) {
+      // Verificar se já existe clube com esse nome
+      const existing = await ctx.db
+        .query("clubs")
+        .filter((q) => q.eq(q.field("name"), club.name))
+        .first();
+
+      if (existing) {
+        skippedCount++;
+        results.push({ name: club.name, status: "skipped", reason: "já existe" });
+        continue;
+      }
+
+      // Criar novo clube
+      const clubId = await ctx.db.insert("clubs", {
+        name: club.name,
+        region: club.region,
+        membersCount: club.registeredMembers,
+        totalScore: 1910, // Pontuação máxima inicial do Campori
+        classification: "MISSIONÁRIO",
+        scores: initialScores,
+        isActive: true,
+      });
+
+      createdCount++;
+      results.push({ name: club.name, status: "created", id: clubId });
+
+      // Log da criação
+      await ctx.db.insert("activityLogs", {
+        userId: args.adminId,
+        userName: admin.name,
+        userRole: admin.role,
+        action: "IMPORT_CLUB",
+        details: `Importou clube ${club.name} - Região ${club.region} - ${club.registeredMembers} inscritos`,
+        timestamp: Date.now(),
+        clubId: clubId,
+        clubName: club.name,
+      });
+    }
+
+    return {
+      success: true,
+      created: createdCount,
+      skipped: skippedCount,
+      total: args.clubs.length,
+      results,
+      message: `${createdCount} clubes importados com sucesso! ${skippedCount} já existiam.`
+    };
+  },
 });

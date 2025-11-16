@@ -238,7 +238,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     setSelectedClub(club);
     // Inicializar com penalidades zeradas ou existentes
     const currentPenalties = club.scores || {
-      prerequisites: { photos: 0, directorPresence: 0 },
+      prerequisites: { directorPresence: 0 },
       participation: { opening: 0, saturdayMorning: 0, saturdayNight: 0, saturdayMeeting: 0, sundayMeeting: 0 },
       general: { firstAidKit: 0, secretaryFolder: 0, doorIdentification: 0, badges: 0, uniform: 0 },
       events: { 

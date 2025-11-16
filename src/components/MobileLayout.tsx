@@ -118,7 +118,7 @@ export function MobileLayout({ user, onLogout, children }: MobileLayoutProps) {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+      <div className="bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <button 
             className="p-2"

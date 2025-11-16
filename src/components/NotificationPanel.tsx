@@ -110,7 +110,7 @@ export function NotificationPanel({ isOpen, onClose, user }: NotificationPanelPr
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
+        <div className="bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Bell size={20} />

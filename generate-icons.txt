@@ -1,7 +1,7 @@
 # Script para gerar ícones PWA
 # Este script deve ser executado para criar os ícones necessários
 
-echo "Para criar os ícones PWA, você pode usar a imagem aventuri.png existente."
+echo "Para criar os ícones PWA, você pode usar a imagem campori.png existente."
 echo "Recomendamos usar uma ferramenta online como:"
 echo "1. https://www.pwabuilder.com/imageGenerator"
 echo "2. https://tools.crawlink.com/tools/pwa-icon-generator/"

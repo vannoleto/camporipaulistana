@@ -48,6 +48,7 @@ import {
   XCircle,
   Volume2,
   DoorClosed,
+  ChefHat,
   Download,
   Copy,
   Zap,
@@ -462,7 +463,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         </div>
 
         {/* Próximo Nível */}
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-4">
+        <div className="bg-gradient-to-r from-campori-navy/10 to-campori-darkGreen/10 rounded-2xl p-4">
           <div className="text-center">
             <div className="text-sm font-medium text-gray-700 mb-2">Próximo Nível</div>
             {classification === "APRENDIZ" && (
@@ -590,48 +591,47 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {currentScores.prerequisites.photos + currentScores.prerequisites.directorPresence}
+                  {currentScores.prerequisites.directorPresence}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Pré-requisitos</div>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
                   {currentScores.participation.opening + currentScores.participation.saturdayMorning + 
-                   currentScores.participation.saturdayNight + currentScores.participation.saturdayMeeting + 
-                   currentScores.participation.sundayMeeting}
+                   currentScores.participation.saturdayEvening + currentScores.participation.sundayMorning + 
+                   currentScores.participation.sundayEvening + currentScores.participation.directorMeetingFriday +
+                   currentScores.participation.directorMeetingSaturday}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Participação</div>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {currentScores.general.firstAidKit + currentScores.general.secretaryFolder + 
-                   currentScores.general.doorIdentification + currentScores.general.badges + 
-                   currentScores.general.uniform}
+                  {currentScores.secretary.firstAidKit + currentScores.secretary.secretaryFolder + 
+                   currentScores.secretary.healthFolder}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">Gerais</div>
+                <div className="text-sm text-gray-600 mt-1">Secretário</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {currentScores.events.twelveHour + currentScores.events.carousel.abel + 
-                   currentScores.events.carousel.jacob + currentScores.events.carousel.samson + 
-                   currentScores.events.carousel.rahab + currentScores.events.carousel.gideon + 
-                   currentScores.events.carousel.barak}
+                  {currentScores.events.carousel + currentScores.events.extraActivities + 
+                   currentScores.events.representative}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Eventos</div>
               </div>
               <div className="text-center p-4 bg-indigo-50 rounded-lg">
                 <div className="text-2xl font-bold text-indigo-600">
-                  {currentScores.bonus.pastorVisit + currentScores.bonus.adultVolunteer + 
-                   currentScores.bonus.healthProfessional}
+                  {currentScores.bonus.pastorVisit + currentScores.bonus.healthProfessional}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Bônus</div>
               </div>
               <div className="text-center p-4 bg-red-50 rounded-lg">
                 <div className="text-2xl font-bold text-red-600">
-                  {currentScores.demerits.driverIssues + currentScores.demerits.lackReverence + 
-                   currentScores.demerits.noBadge + currentScores.demerits.unaccompaniedChild + 
-                   currentScores.demerits.unauthorizedVisits + currentScores.demerits.vandalism + 
-                   currentScores.demerits.silenceViolation + currentScores.demerits.disrespect}
+                  {currentScores.demerits.noIdentification + currentScores.demerits.unaccompanied + 
+                   currentScores.demerits.inappropriate + currentScores.demerits.campingActivity + 
+                   currentScores.demerits.interference + currentScores.demerits.improperClothing +
+                   currentScores.demerits.disrespect + currentScores.demerits.improperBehavior +
+                   currentScores.demerits.substances + currentScores.demerits.sexOpposite +
+                   currentScores.demerits.artificialFires + currentScores.demerits.unauthorizedVehicles}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Deméritos</div>
               </div>
@@ -673,7 +673,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     }
 
     const currentScores = userClub.scores || {
-      prerequisites: { photos: 300, directorPresence: 50 },
+      prerequisites: { directorPresence: 30 },
       participation: { opening: 100, saturdayMorning: 100, saturdayNight: 100, saturdayMeeting: 50, sundayMeeting: 50 },
       general: { firstAidKit: 300, secretaryFolder: 500, doorIdentification: 200, badges: 200, uniform: 100 },
       events: { 
@@ -761,7 +761,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
 
 
         {/* Pontuação Atual */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-xl shadow-sm">
+        <div className="bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white p-6 rounded-xl shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Pontuação Atual</h3>
@@ -821,35 +821,35 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               <Users size={20} />
               Participação
             </span>, 
-            "participation", scoringCriteria.participation, currentScores.participation
+            "participation", (scoringCriteria as any).participation, currentScores.participation
           )}
-          {renderScoringSection(
+          {(currentScores as any)?.secretary && renderScoringSection(
             <span className="flex items-center gap-2">
               <Target size={20} />
-              Critérios Gerais
+              Secretário
             </span>, 
-            "general", scoringCriteria.general, currentScores.general
+            "secretary", (scoringCriteria as any).secretary, (currentScores as any).secretary
           )}
           {renderScoringSection(
             <span className="flex items-center gap-2">
               <Star size={20} />
               Eventos
             </span>, 
-            "events", scoringCriteria.events, currentScores.events
+            "events", (scoringCriteria as any).events, currentScores.events
           )}
           {renderScoringSection(
             <span className="flex items-center gap-2">
               <Trophy size={20} />
               Bônus
             </span>, 
-            "bonus", scoringCriteria.bonus, currentScores.bonus
+            "bonus", (scoringCriteria as any).bonus, currentScores.bonus
           )}
           {renderScoringSection(
             <span className="flex items-center gap-2">
               <X size={20} />
               Deméritos
             </span>, 
-            "demerits", scoringCriteria.demerits, currentScores.demerits, true
+            "demerits", (scoringCriteria as any).demerits, currentScores.demerits, true
           )}
         </div>
       </div>
@@ -883,44 +883,92 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
       // Mapear categorias para descrições em português
       const categoryMap: any = {
         'prerequisites': 'Pré-requisitos',
+        'campground': 'Área de Acampamento',
+        'kitchen': 'Cozinha',
         'participation': 'Participação',
-        'general': 'Gerais',
-        'events': 'Eventos',
+        'uniform': 'Uniforme',
+        'secretary': 'Secretaria',
+        'events': 'Eventos/Provas',
         'bonus': 'Bônus',
         'demerits': 'Deméritos'
       };
 
       // Mapear subcategorias para descrições específicas
       const subcategoryMap: any = {
+        // Pré-requisitos
+        'directorPresence': 'Presença do diretor na reunião prévia',
+        
+        // Área de Acampamento
+        'portal': 'Portal identificado',
+        'clothesline': 'Varal de roupas',
+        'pioneers': 'Pequenas pioneiras',
+        'campfireArea': 'Área cercada',
+        'materials': 'Depósito de materiais',
+        'tentOrganization': 'Organização das barracas',
+        'security': 'Segurança',
+        'readyCamp': 'Acampamento pronto',
+        'chairsOrBench': 'Cadeiras/banquetas',
+        
+        // Cozinha
+        'tentSetup': 'Montagem da tenda',
+        'identification': 'Identificação da cozinha',
+        'tentSize': 'Tamanho da tenda',
+        'gasRegister': 'Gás e mangueira',
+        'firePosition': 'Posição do fogão',
+        'refrigerator': 'Posição da geladeira',
+        'tables': 'Tomadas/mesas',
+        'extinguisher': 'Extintor de incêndio',
+        'menu': 'Cardápio vegetariano',
+        'menuDisplay': 'Exposição do cardápio',
+        'containers': 'Recipientes adequados',
+        'uniform': 'Uniforme da equipe',
+        'handSanitizer': 'Higienizador de mãos',
+        'washBasin': 'Lavatório',
+        'cleaning': 'Limpeza do local',
+        'water': 'Água potável',
+        'identification2': 'Saquetas identificadas',
+        
         // Participação
-        'opening': 'Clube 100% presente na abertura',
-        'saturdayMorning': 'Clube 100% presente no sábado manhã',
-        'saturdayNight': 'Clube 100% presente no sábado noite',
-        'saturdayMeeting': 'Reunião do clube no sábado',
-        'sundayMeeting': 'Reunião do clube no domingo',
+        'opening': 'Programa de abertura',
+        'saturdayMorning': 'Sexta-feira manhã',
+        'saturdayEvening': 'Sexta-feira noite',
+        'sundayMorning': 'Sábado manhã',
+        'saturdayAfternoon': 'Sábado tarde',
+        'sundayEvening': 'Domingo manhã',
+        'directorMeetingFriday': 'Reunião diretoria sexta',
+        'directorMeetingSaturday': 'Reunião diretoria sábado',
+        
+        // Uniforme
+        'programmedUniform': 'Uniforme programado sábado manhã',
+        'badges': 'Bandeirins das unidades',
+        
+        // Secretaria
+        'firstAidKit': 'Kit primeiros socorros completo',
+        'secretaryFolder': 'Pasta de secretaria completa',
+        'healthFolder': 'Pasta de saúde completa',
+        
+        // Eventos
+        'carousel': 'Participação carrossel aventura',
+        'extraActivities': 'Participação atividades extras',
+        'representative': 'Representante no 24h',
         
         // Deméritos
-        'unaccompaniedChild': 'Aventureiro desacompanhado (por aventureiro)',
-        'driverIssues': 'Problemas com motorista',
-        'lackReverence': 'Falta de reverência',
-        'noBadge': 'Sem distintivo',
-        'unauthorizedVisits': 'Visitas não autorizadas',
-        'vandalism': 'Vandalismo',
-        'silenceViolation': 'Violação do silêncio',
-        'disrespect': 'Desrespeito',
+        'unaccompanied': 'Desbravador desacompanhado (por desbravador)',
+        'noIdentification': 'Membro sem pulseira de identificação',
+        'inappropriate': 'Uso inapropriado de lanternas/laser/instrumentos',
+        'campingActivity': 'Atividade na área ou som alto após silêncio',
+        'interference': 'Visitas interferindo fora do período',
+        'improperClothing': 'Roupas inapropriadas ou sem camisa',
+        'disrespect': 'Desrespeito ao staff ou agressão',
+        'improperBehavior': 'Contato físico excessivo entre casais',
+        'substances': 'Uso/posse de substâncias ilícitas',
+        'sexOpposite': 'Entrar em barracas do sexo oposto',
+        'artificialFires': 'Uso de fogos artificiais',
+        'unauthorizedVehicles': 'Veículos não autorizados',
         
-        // Outros
-        'photos': 'Fotos do clube',
-        'directorPresence': 'Presença do diretor',
-        'firstAidKit': 'Kit de primeiros socorros',
-        'secretaryFolder': 'Pasta do secretário',
-        'doorIdentification': 'Identificação da porta',
-        'badges': 'Distintivos',
-        'uniform': 'Uniforme',
-        'twelveHour': 'Evento 12 horas',
-        'pastorVisit': 'Visita do pastor',
-        'adultVolunteer': 'Voluntário adulto',
-        'healthProfessional': 'Profissional de saúde'
+        // Bônus
+        'pastorVisit': 'Visita do pastor distrital',
+        'healthProfessional': 'Profissional de saúde na escala'
       };
 
       const categoryText = categoryMap[category] || category;
@@ -938,46 +986,79 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
       // Ícones específicos para cada subcategoria
       const specificIconMap: any = {
         // Pré-requisitos
-        'photos': <Camera size={16} className="text-blue-600" />,
         'directorPresence': <UserCheck size={16} className="text-green-600" />,
+        
+        // Área de Acampamento
+        'portal': <Home size={16} className="text-blue-600" />,
+        'clothesline': <Home size={16} className="text-gray-600" />,
+        'pioneers': <Home size={16} className="text-green-600" />,
+        'campfireArea': <Home size={16} className="text-orange-600" />,
+        'materials': <Home size={16} className="text-brown-600" />,
+        'tentOrganization': <Home size={16} className="text-blue-600" />,
+        'security': <Shield size={16} className="text-red-600" />,
+        'readyCamp': <Home size={16} className="text-green-600" />,
+        'chairsOrBench': <Home size={16} className="text-gray-600" />,
+        
+        // Cozinha
+        'tentSetup': <ChefHat size={16} className="text-orange-600" />,
+        'identification': <ChefHat size={16} className="text-blue-600" />,
+        'tentSize': <ChefHat size={16} className="text-gray-600" />,
+        'gasRegister': <ChefHat size={16} className="text-red-600" />,
+        'firePosition': <ChefHat size={16} className="text-orange-600" />,
+        'refrigerator': <ChefHat size={16} className="text-cyan-600" />,
+        'tables': <ChefHat size={16} className="text-brown-600" />,
+        'extinguisher': <Shield size={16} className="text-red-600" />,
+        'menu': <ChefHat size={16} className="text-green-600" />,
+        'menuDisplay': <ChefHat size={16} className="text-blue-600" />,
+        'containers': <ChefHat size={16} className="text-gray-600" />,
+        'uniform': <ChefHat size={16} className="text-blue-600" />,
+        'handSanitizer': <ChefHat size={16} className="text-green-600" />,
+        'washBasin': <ChefHat size={16} className="text-cyan-600" />,
+        'cleaning': <ChefHat size={16} className="text-green-600" />,
+        'water': <ChefHat size={16} className="text-blue-600" />,
+        'identification2': <ChefHat size={16} className="text-purple-600" />,
         
         // Participação
         'opening': <Users size={16} className="text-blue-600" />,
-        'saturdayMorning': <Users size={16} className="text-blue-600" />,
-        'saturdayNight': <Users size={16} className="text-blue-600" />,
-        'saturdayMeeting': <CalendarIcon size={16} className="text-purple-600" />,
-        'sundayMeeting': <CalendarIcon size={16} className="text-purple-600" />,
+        'saturdayMorning': <Users size={16} className="text-green-600" />,
+        'saturdayEvening': <Users size={16} className="text-purple-600" />,
+        'sundayMorning': <Users size={16} className="text-yellow-600" />,
+        'saturdayAfternoon': <Users size={16} className="text-orange-600" />,
+        'sundayEvening': <Users size={16} className="text-pink-600" />,
+        'directorMeetingFriday': <CalendarIcon size={16} className="text-purple-600" />,
+        'directorMeetingSaturday': <CalendarIcon size={16} className="text-blue-600" />,
         
-        // Gerais
-        'firstAidKit': <Heart size={16} className="text-red-500" />,
-        'secretaryFolder': <Folder size={16} className="text-orange-600" />,
-        'doorIdentification': <DoorClosed size={16} className="text-gray-600" />,
-        'badges': <Badge size={16} className="text-yellow-600" />,
-        'uniform': <Shirt size={16} className="text-blue-600" />,
+        // Uniforme
+        'programmedUniform': <Shirt size={16} className="text-blue-600" />,
+        'badges': <Award size={16} className="text-yellow-600" />,
+        
+        // Secretaria
+        'firstAidKit': <Heart size={16} className="text-red-600" />,
+        'secretaryFolder': <FileText size={16} className="text-blue-600" />,
+        'healthFolder': <Heart size={16} className="text-green-600" />,
         
         // Eventos
-        'twelveHour': <Clock12 size={16} className="text-orange-600" />,
-        'abel': <Target size={16} className="text-green-600" />,
-        'jacob': <Target size={16} className="text-blue-600" />,
-        'samson': <Target size={16} className="text-purple-600" />,
-        'rahab': <Target size={16} className="text-pink-600" />,
-        'gideon': <Target size={16} className="text-yellow-600" />,
-        'barak': <Target size={16} className="text-red-600" />,
+        'carousel': <Trophy size={16} className="text-gold-600" />,
+        'extraActivities': <Star size={16} className="text-purple-600" />,
+        'representative': <UserCheck size={16} className="text-orange-600" />,
         
         // Bônus
-        'pastorVisit': <Church size={16} className="text-purple-600" />,
-        'adultVolunteer': <UserPlus size={16} className="text-green-600" />,
-        'healthProfessional': <Heart size={16} className="text-red-500" />,
+        'pastorVisit': <Users size={16} className="text-green-600" />,
+        'healthProfessional': <Heart size={16} className="text-blue-600" />,
         
         // Deméritos
-        'driverIssues': <Car size={16} className="text-red-600" />,
-        'lackReverence': <XCircle size={16} className="text-red-600" />,
-        'noBadge': <Badge size={16} className="text-red-600" />,
-        'unaccompaniedChild': <UserX size={16} className="text-red-600" />,
-        'unauthorizedVisits': <DoorClosed size={16} className="text-red-600" />,
-        'vandalism': <Zap size={16} className="text-red-600" />,
-        'silenceViolation': <Volume2 size={16} className="text-red-600" />,
-        'disrespect': <XCircle size={16} className="text-red-600" />
+        'noIdentification': <UserX size={16} className="text-red-600" />,
+        'unaccompanied': <UserX size={16} className="text-red-600" />,
+        'inappropriate': <XCircle size={16} className="text-red-600" />,
+        'campingActivity': <Volume2 size={16} className="text-red-600" />,
+        'interference': <DoorClosed size={16} className="text-red-600" />,
+        'improperClothing': <Shirt size={16} className="text-red-600" />,
+        'disrespect': <XCircle size={16} className="text-red-600" />,
+        'improperBehavior': <XCircle size={16} className="text-red-600" />,
+        'substances': <XCircle size={16} className="text-red-600" />,
+        'sexOpposite': <DoorClosed size={16} className="text-red-600" />,
+        'artificialFires': <Zap size={16} className="text-red-600" />,
+        'unauthorizedVehicles': <Car size={16} className="text-red-600" />
       };
       
       // Se existe ícone específico, usar ele, senão usar ícone da categoria
@@ -1160,7 +1241,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header Mobile */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+      <div className="bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-white/10 p-2 rounded-lg">
@@ -1249,7 +1330,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center py-2 px-3 transition-all duration-200 ${
                 activeTab === tab.id
-                  ? "text-indigo-600"
+                  ? "text-campori-navy"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >

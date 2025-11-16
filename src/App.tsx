@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Toaster } from "sonner";
 import { ProfileSelection } from "./components/ProfileSelection";
-import { AdminDashboard } from "./components/AdminDashboard";
+import AdminDashboard from "./components/AdminDashboard";
 import { DirectorDashboard } from "./components/DirectorDashboard";
 import { RegionalDashboard } from "./components/RegionalDashboard";
 import { StaffDashboard } from "./components/StaffDashboard";

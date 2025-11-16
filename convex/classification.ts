@@ -2,51 +2,76 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Função para calcular classificação baseada na pontuação
+// Sistema Campori Paulistana 2025: DEDUÇÃO de pontos a partir de 1910 pontos máximos
+// Classificações: MISSIONÁRIO (≥1496), VOLUNTÁRIO (≥1232), APRENDIZ (<1232)
+
+// Função para calcular classificação baseada na pontuação (Campori)
 function getClassification(totalScore: number): string {
-  if (totalScore >= 2300) return "HEROI";
-  if (totalScore >= 1100) return "FIEL_ESCUDEIRO";
+  if (totalScore >= 1496) return "MISSIONÁRIO";
+  if (totalScore >= 1232) return "VOLUNTÁRIO";
   return "APRENDIZ";
 }
 
-// Função para calcular pontuação total
+// Função para calcular pontuação total (Sistema de DEDUÇÃO)
 function calculateTotalScore(scores: any): number {
-  const prerequisites = scores.prerequisites.photos + scores.prerequisites.directorPresence;
+  if (!scores) return 1910; // Pontuação máxima inicial
+
+  const MAX_SCORE = 1910;
+  let penalties = 0;
+
+  // Calcular penalidades (pontos PERDIDOS) em cada categoria
+  if (scores.prerequisites) {
+    penalties += Math.abs(scores.prerequisites.photos || 0);
+    penalties += Math.abs(scores.prerequisites.directorPresence || 0);
+  }
   
-  const participation = scores.participation.opening + 
-                       scores.participation.saturdayMorning + 
-                       scores.participation.saturdayNight + 
-                       scores.participation.saturdayMeeting + 
-                       scores.participation.sundayMeeting;
+  if (scores.participation) {
+    penalties += Math.abs(scores.participation.opening || 0);
+    penalties += Math.abs(scores.participation.saturdayMorning || 0);
+    penalties += Math.abs(scores.participation.saturdayNight || 0);
+    penalties += Math.abs(scores.participation.saturdayMeeting || 0);
+    penalties += Math.abs(scores.participation.sundayMeeting || 0);
+  }
   
-  const general = scores.general.firstAidKit + 
-                 scores.general.secretaryFolder + 
-                 scores.general.doorIdentification + 
-                 scores.general.badges + 
-                 scores.general.uniform;
+  if (scores.general) {
+    penalties += Math.abs(scores.general.firstAidKit || 0);
+    penalties += Math.abs(scores.general.secretaryFolder || 0);
+    penalties += Math.abs(scores.general.doorIdentification || 0);
+    penalties += Math.abs(scores.general.badges || 0);
+    penalties += Math.abs(scores.general.uniform || 0);
+  }
   
-  const events = scores.events.twelveHour + 
-                scores.events.carousel.abel + 
-                scores.events.carousel.jacob + 
-                scores.events.carousel.samson + 
-                scores.events.carousel.rahab + 
-                scores.events.carousel.gideon + 
-                scores.events.carousel.barak;
+  if (scores.events) {
+    penalties += Math.abs(scores.events.twelveHour || 0);
+    if (scores.events.carousel) {
+      penalties += Math.abs(scores.events.carousel.abel || 0);
+      penalties += Math.abs(scores.events.carousel.jacob || 0);
+      penalties += Math.abs(scores.events.carousel.samson || 0);
+      penalties += Math.abs(scores.events.carousel.rahab || 0);
+      penalties += Math.abs(scores.events.carousel.gideon || 0);
+      penalties += Math.abs(scores.events.carousel.barak || 0);
+    }
+  }
   
-  const bonus = scores.bonus.pastorVisit + 
-               scores.bonus.adultVolunteer + 
-               scores.bonus.healthProfessional;
+  if (scores.bonus) {
+    penalties += Math.abs(scores.bonus.pastorVisit || 0);
+    penalties += Math.abs(scores.bonus.adultVolunteer || 0);
+    penalties += Math.abs(scores.bonus.healthProfessional || 0);
+  }
   
-  const demerits = scores.demerits.driverIssues + 
-                  scores.demerits.lackReverence + 
-                  scores.demerits.noBadge + 
-                  scores.demerits.unaccompaniedChild + 
-                  scores.demerits.unauthorizedVisits + 
-                  scores.demerits.vandalism + 
-                  scores.demerits.silenceViolation + 
-                  scores.demerits.disrespect;
+  if (scores.demerits) {
+    penalties += Math.abs(scores.demerits.driverIssues || 0);
+    penalties += Math.abs(scores.demerits.lackReverence || 0);
+    penalties += Math.abs(scores.demerits.noBadge || 0);
+    penalties += Math.abs(scores.demerits.unaccompaniedChild || 0);
+    penalties += Math.abs(scores.demerits.unauthorizedVisits || 0);
+    penalties += Math.abs(scores.demerits.vandalism || 0);
+    penalties += Math.abs(scores.demerits.silenceViolation || 0);
+    penalties += Math.abs(scores.demerits.disrespect || 0);
+  }
   
-  return 3050 + prerequisites + participation + general + events + bonus + demerits;
+  // Pontuação final = Máximo (1910) - Penalidades
+  return Math.max(0, MAX_SCORE - penalties);
 }
 
 // Reclassificar todos os clubes baseado na pontuação atual
@@ -217,13 +242,34 @@ export const fixInitialClassifications = mutation({
     const clubs = await ctx.db.query("clubs").collect();
     let correctedCount = 0;
     
+    // Corrigir clubes que ainda estão com o sistema antigo (3050 pts, classificação HEROI)
     for (const club of clubs) {
-      if (club.totalScore === 3050 && club.classification === "HEROI") {
-        await ctx.db.patch(club._id, { classification: "APRENDIZ" });
+      // Recalcular pontuação baseada nos scores atuais
+      const newTotalScore = calculateTotalScore(club.scores);
+      const newClassification = getClassification(newTotalScore);
+      
+      // Atualizar se necessário
+      if (club.totalScore !== newTotalScore || club.classification !== newClassification) {
+        await ctx.db.patch(club._id, {
+          totalScore: newTotalScore,
+          classification: newClassification,
+        });
         correctedCount++;
+        
+        // Log da correção
+        await ctx.db.insert("activityLogs", {
+          userId: args.adminId,
+          userName: admin.name,
+          userRole: admin.role,
+          action: "FIX_INITIAL_CLASSIFICATION",
+          details: `Migrou clube ${club.name} para sistema Campori: ${club.totalScore} → ${newTotalScore} pts, ${club.classification} → ${newClassification}`,
+          timestamp: Date.now(),
+          clubId: club._id,
+          clubName: club.name,
+        });
       }
     }
 
-    return `${correctedCount} clubes corrigidos de ${clubs.length} total`;
+    return `${correctedCount} clubes migrados para o sistema Campori (1910 pts) de ${clubs.length} total`;
   },
 });

@@ -1,0 +1,926 @@
+[
+  {
+    "isActive": true,
+    "name": "ANTARES",
+    "region": "R1",
+    "membersCount": 17,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALVORADA DA VIDA",
+    "region": "R1",
+    "membersCount": 28,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "COLIBRI",
+    "region": "R1",
+    "membersCount": 70,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELA DO ORIENTE",
+    "region": "R1",
+    "membersCount": 39,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "EVEREST MASTER",
+    "region": "R1",
+    "membersCount": 40,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GAVIÃO REAL",
+    "region": "R1",
+    "membersCount": 116,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DE LOS ANDES",
+    "region": "R1",
+    "membersCount": 121,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LIRIOS DO VALE",
+    "region": "R1",
+    "membersCount": 42,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PIONEIROS DO CAMBUCI",
+    "region": "R1",
+    "membersCount": 53,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SOL NASCENTE",
+    "region": "R1",
+    "membersCount": 31,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DE HAIA",
+    "region": "R2",
+    "membersCount": 62,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALMIRANTE TAMANDARÉ",
+    "region": "R2",
+    "membersCount": 30,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALPHA SIRIUS",
+    "region": "R2",
+    "membersCount": 22,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ARCO-IRIS",
+    "region": "R2",
+    "membersCount": 31,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "BETA",
+    "region": "R2",
+    "membersCount": 38,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "BORBA GATO",
+    "region": "R2",
+    "membersCount": 43,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CAMPESTRE",
+    "region": "R2",
+    "membersCount": 105,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CONDOR DA MONTANHA",
+    "region": "R2",
+    "membersCount": 34,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "EPSYLON",
+    "region": "R2",
+    "membersCount": 24,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "FORÇA UNIDA DO MAR",
+    "region": "R2",
+    "membersCount": 30,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MAR PAULISTA",
+    "region": "R2",
+    "membersCount": 26,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÓRION",
+    "region": "R2",
+    "membersCount": 151,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "RAIOS DO SOL",
+    "region": "R2",
+    "membersCount": 35,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "REALEZA",
+    "region": "R2",
+    "membersCount": 17,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "UNIDADE",
+    "region": "R2",
+    "membersCount": 41,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "URSO PRUDENTE",
+    "region": "R2",
+    "membersCount": 54,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "XAVANTES",
+    "region": "R2",
+    "membersCount": 34,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ABALON",
+    "region": "R3",
+    "membersCount": 18,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ADEMUS",
+    "region": "R3",
+    "membersCount": 56,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CRUZEIRO DO SUL",
+    "region": "R3",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELA DO VALE",
+    "region": "R3",
+    "membersCount": 15,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GIDEÃO",
+    "region": "R3",
+    "membersCount": 32,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DE ORION",
+    "region": "R3",
+    "membersCount": 21,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "JAGUÁR",
+    "region": "R3",
+    "membersCount": 22,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MENSAGEIROS DO APOCALIPSE",
+    "region": "R3",
+    "membersCount": 29,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PIONEIROS DO CAMPO",
+    "region": "R3",
+    "membersCount": 68,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SENTINELAS",
+    "region": "R3",
+    "membersCount": 46,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SOLDADOS DO REI",
+    "region": "R3",
+    "membersCount": 45,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "VALE DO ÉDEN",
+    "region": "R3",
+    "membersCount": 49,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "AVALANCHE",
+    "region": "R4",
+    "membersCount": 35,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LUZ CELESTE",
+    "region": "R4",
+    "membersCount": 18,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MORIÁ",
+    "region": "R4",
+    "membersCount": 40,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MUNHAMI",
+    "region": "R4",
+    "membersCount": 38,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PEDRAS RARAS",
+    "region": "R4",
+    "membersCount": 42,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PIONEIROS DE ORION",
+    "region": "R4",
+    "membersCount": 17,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SIÃO",
+    "region": "R4",
+    "membersCount": 19,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "TOPÁZIO",
+    "region": "R4",
+    "membersCount": 37,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DE ATLANTA",
+    "region": "R5",
+    "membersCount": 31,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ARC GIDEONI",
+    "region": "R5",
+    "membersCount": 34,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "BETEL(GE)",
+    "region": "R5",
+    "membersCount": 18,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GALILEU",
+    "region": "R5",
+    "membersCount": 19,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "RAPOSO TAVARES",
+    "region": "R5",
+    "membersCount": 55,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SARÔN",
+    "region": "R5",
+    "membersCount": 43,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "AGNUS DEI",
+    "region": "R6",
+    "membersCount": 58,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CASTOR",
+    "region": "R6",
+    "membersCount": 30,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "EMBAIXADOR EMANUEL",
+    "region": "R6",
+    "membersCount": 32,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "FRUTOS DO ÉDEN",
+    "region": "R6",
+    "membersCount": 29,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DA ALDEIA",
+    "region": "R6",
+    "membersCount": 59,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES ÁGUA BRANCA",
+    "region": "R6",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "JOSUÉ DO AMANHÃ",
+    "region": "R6",
+    "membersCount": 56,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "NOVA ALIANÇA",
+    "region": "R6",
+    "membersCount": 59,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "VALE DE ESCOL",
+    "region": "R6",
+    "membersCount": 22,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALPHA 7",
+    "region": "R7",
+    "membersCount": 103,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "AMAZÔNIA",
+    "region": "R7",
+    "membersCount": 61,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ARARAT",
+    "region": "R7",
+    "membersCount": 21,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ECLIPSE",
+    "region": "R7",
+    "membersCount": 24,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELAS DO ADVENTO",
+    "region": "R7",
+    "membersCount": 43,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DO VALE",
+    "region": "R7",
+    "membersCount": 32,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LEÕES DE SANTANA",
+    "region": "R7",
+    "membersCount": 41,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LEONIDAS",
+    "region": "R7",
+    "membersCount": 29,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LUMINAR",
+    "region": "R7",
+    "membersCount": 16,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LUZEIRO CAMPESTRE",
+    "region": "R7",
+    "membersCount": 54,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MENSAGEIROS DA PAZ",
+    "region": "R7",
+    "membersCount": 25,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "OBJETIVO DE ÁGUA",
+    "region": "R7",
+    "membersCount": 29,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÔNIX ESTRELO",
+    "region": "R7",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PEDRAS DO REINO",
+    "region": "R7",
+    "membersCount": 14,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SETE ESTRELAS",
+    "region": "R7",
+    "membersCount": 49,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "TUPINAMBÁ",
+    "region": "R7",
+    "membersCount": 31,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "UNIVERSO",
+    "region": "R7",
+    "membersCount": 12,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGAPE",
+    "region": "R8",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DO REI",
+    "region": "R8",
+    "membersCount": 17,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALARÃO",
+    "region": "R8",
+    "membersCount": 55,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CEDROS DO LÍBANO",
+    "region": "R8",
+    "membersCount": 57,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESSÊNIOS",
+    "region": "R8",
+    "membersCount": 14,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "FIEL ESCUDEIRO",
+    "region": "R8",
+    "membersCount": 25,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "MENSAGEIROS DE MIGUEL",
+    "region": "R8",
+    "membersCount": 20,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "RESPLANDECER",
+    "region": "R8",
+    "membersCount": 44,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SOBRE AROCHA",
+    "region": "R8",
+    "membersCount": 49,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALFA ÔMEGA",
+    "region": "R9",
+    "membersCount": 21,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIA REAL",
+    "region": "R9",
+    "membersCount": 37,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DA VITÓRIA",
+    "region": "R9",
+    "membersCount": 23,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DE MARÇAL",
+    "region": "R9",
+    "membersCount": 19,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ALFA",
+    "region": "R9",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "APÔS",
+    "region": "R9",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELA CELESTE",
+    "region": "R9",
+    "membersCount": 68,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELAS DO ADVENTO",
+    "region": "R9",
+    "membersCount": 42,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DOS MONTES",
+    "region": "R9",
+    "membersCount": 16,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "IMPERATORES DA SERRA",
+    "region": "R9",
+    "membersCount": 19,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LUZEIROS DA COLINA",
+    "region": "R9",
+    "membersCount": 59,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SOL DA JUSTIÇA",
+    "region": "R9",
+    "membersCount": 17,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DO MONTE",
+    "region": "R10",
+    "membersCount": 37,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CONQUISTADORES DO REINO",
+    "region": "R10",
+    "membersCount": 32,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "DOMINIOS",
+    "region": "R10",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "EMBAIXADORES DO REI",
+    "region": "R10",
+    "membersCount": 34,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDAS DA MATA",
+    "region": "R10",
+    "membersCount": 13,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PÉROLAS DO SUL",
+    "region": "R10",
+    "membersCount": 22,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "STEFANOS",
+    "region": "R10",
+    "membersCount": 28,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "TUPIS",
+    "region": "R10",
+    "membersCount": 41,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "VEGA",
+    "region": "R10",
+    "membersCount": 44,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ÁGUIAS DO VALE",
+    "region": "R11",
+    "membersCount": 30,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "BRILHO REAL",
+    "region": "R11",
+    "membersCount": 18,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CARMEL",
+    "region": "R11",
+    "membersCount": 36,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ELUNÁ REAL",
+    "region": "R11",
+    "membersCount": 48,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "FELINOS DO VALE",
+    "region": "R11",
+    "membersCount": 52,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DA ESPERANÇA",
+    "region": "R11",
+    "membersCount": 31,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "GUARDIÕES DO REI",
+    "region": "R11",
+    "membersCount": 53,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "HELEK",
+    "region": "R11",
+    "membersCount": 75,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LEO DO (STRI)",
+    "region": "R11",
+    "membersCount": 39,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LEÕES DO FORTE",
+    "region": "R11",
+    "membersCount": 46,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "OLIVER",
+    "region": "R11",
+    "membersCount": 34,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "QUERUBINS DO AMANHÃ",
+    "region": "R11",
+    "membersCount": 28,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "REMANESCENTE DO SOL",
+    "region": "R11",
+    "membersCount": 43,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SÍRIUS",
+    "region": "R11",
+    "membersCount": 29,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "TRIBO DE DAVI",
+    "region": "R11",
+    "membersCount": 59,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "VALE DE JOSAFÁ",
+    "region": "R11",
+    "membersCount": 33,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "CASTELO FORTE",
+    "region": "R12",
+    "membersCount": 19,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELA DA LUZ",
+    "region": "R12",
+    "membersCount": 38,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "ESTRELA DA MANHÃ",
+    "region": "R12",
+    "membersCount": 23,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "JARDIM JUVENIL",
+    "region": "R12",
+    "membersCount": 39,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "LÍRIOS",
+    "region": "R12",
+    "membersCount": 66,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "PEDRA ANGULAR",
+    "region": "R12",
+    "membersCount": 53,
+    "totalScore": 1910
+  },
+  {
+    "isActive": true,
+    "name": "SENDEIRO DO SERTO",
+    "region": "R12",
+    "membersCount": 47,
+    "totalScore": 1910
+  }
+]

@@ -56,7 +56,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     
     // Pré-requisitos
     if (scores.prerequisites) {
-      total += scores.prerequisites.photos || 0;
+      // Apenas directorPresence
       total += scores.prerequisites.directorPresence || 0;
     }
     
@@ -116,10 +116,11 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   };
 
   // Função para determinar classificação baseada na pontuação
-  const getClassification = (totalScore: number) => {
-    if (totalScore >= 6500) return "HEROI";
-    if (totalScore >= 5000) return "FIEL_ESCUDEIRO";
-    return "APRENDIZ";
+  const getClassification = (totalScore: number): string => {
+    if (totalScore >= 1500) return "OURO";
+    if (totalScore >= 1000) return "PRATA";
+    if (totalScore >= 500) return "BRONZE";
+    return "PARTICIPACAO";
   };
 
   // Atualizar pontuação quando editingPenalties mudar
@@ -188,7 +189,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     setSelectedClub(club);
     // Inicializar com penalidades zeradas ou existentes
     const currentPenalties = club.scores || {
-      prerequisites: { photos: 0, directorPresence: 0 },
+      prerequisites: { directorPresence: 0 },
       participation: { opening: 0, saturdayMorning: 0, saturdayNight: 0, saturdayMeeting: 0, sundayMeeting: 0 },
       general: { firstAidKit: 0, secretaryFolder: 0, doorIdentification: 0, badges: 0, uniform: 0 },
       events: { 
@@ -265,14 +266,17 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Classificação:</span>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  club.classification === "HEROI" 
-                    ? "bg-purple-100 text-purple-800"
-                    : club.classification === "FIEL_ESCUDEIRO"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-green-100 text-green-800"
+                  club.classification === "OURO" 
+                    ? "bg-yellow-100 text-yellow-800"
+                    : club.classification === "PRATA"
+                    ? "bg-gray-100 text-gray-800"
+                    : club.classification === "BRONZE"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-blue-100 text-blue-800"
                 }`}>
-                  {club.classification === "HEROI" ? "HERÓI" : 
-                   club.classification === "FIEL_ESCUDEIRO" ? "FIEL ESCUDEIRO" : "APRENDIZ"}
+                  {club.classification === "OURO" ? "OURO" : 
+                   club.classification === "PRATA" ? "PRATA" : 
+                   club.classification === "BRONZE" ? "BRONZE" : "PARTICIPAÇÃO"}
                 </span>
               </div>
               
@@ -487,20 +491,25 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                   {totalScore.toLocaleString()} pts
                 </div>
                 <div className="text-lg flex items-center gap-2 mt-2">
-                  {classification === "HEROI" ? (
+                  {classification === "OURO" ? (
                     <>
                       <Crown size={20} className="text-yellow-500" />
-                      HERÓI
+                      OURO
                     </>
-                  ) : classification === "FIEL_ESCUDEIRO" ? (
+                  ) : classification === "PRATA" ? (
                     <>
-                      <Trophy size={20} className="text-blue-300" />
-                      FIEL ESCUDEIRO
+                      <Trophy size={20} className="text-gray-300" />
+                      PRATA
+                    </>
+                  ) : classification === "BRONZE" ? (
+                    <>
+                      <Star size={20} className="text-orange-300" />
+                      BRONZE
                     </>
                   ) : (
                     <>
-                      <Target size={20} className="text-green-300" />
-                      APRENDIZ
+                      <Target size={20} className="text-blue-300" />
+                      PARTICIPAÇÃO
                     </>
                   )}
                 </div>
@@ -610,9 +619,9 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
         <div className="bg-purple-50 p-6 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-600 text-sm font-medium">Clubes Herói</p>
+              <p className="text-purple-600 text-sm font-medium">Clubes Ouro</p>
               <p className="text-2xl font-bold text-purple-900">
-                {filteredClubs?.filter(c => c.classification === "HEROI").length || 0}
+                {filteredClubs?.filter(c => c.classification === "OURO").length || 0}
               </p>
             </div>
             <div className="text-purple-500">
@@ -654,14 +663,17 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${
-                      club.classification === "HEROI" 
-                        ? "bg-purple-100 text-purple-800"
-                        : club.classification === "FIEL_ESCUDEIRO"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-green-100 text-green-800"
+                      club.classification === "OURO" 
+                        ? "bg-yellow-100 text-yellow-800"
+                        : club.classification === "PRATA"
+                        ? "bg-gray-100 text-gray-800"
+                        : club.classification === "BRONZE"
+                        ? "bg-orange-100 text-orange-800"
+                        : "bg-blue-100 text-blue-800"
                     }`}>
-                      {club.classification === "HEROI" ? "HERÓI" : 
-                       club.classification === "FIEL_ESCUDEIRO" ? "FIEL ESCUDEIRO" : "APRENDIZ"}
+                      {club.classification === "OURO" ? "OURO" : 
+                       club.classification === "PRATA" ? "PRATA" : 
+                       club.classification === "BRONZE" ? "BRONZE" : "PARTICIPAÇÃO"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

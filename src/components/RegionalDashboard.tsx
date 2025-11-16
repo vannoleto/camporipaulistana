@@ -515,7 +515,7 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header Mobile */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+      <div className="bg-gradient-to-r from-campori-darkGreen to-campori-green text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-white/10 p-2 rounded-lg">
@@ -546,8 +546,8 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
               <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
                 <div className="p-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <Globe size={16} className="text-indigo-600" />
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Globe size={16} className="text-campori-darkGreen" />
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{user.name || 'Regional'}</p>
@@ -597,7 +597,7 @@ export function RegionalDashboard({ user, onLogout }: RegionalDashboardProps) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center py-2 px-3 transition-all duration-200 ${
                 activeTab === tab.id
-                  ? "text-indigo-600"
+                  ? "text-campori-darkGreen"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >

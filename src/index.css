@@ -51,7 +51,8 @@ body {
 }
 
 .mobile-header {
-  @apply bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-b-3xl shadow-lg;
+  background: linear-gradient(to right, #023E73, #0F402E);
+  @apply text-white p-4 rounded-b-3xl shadow-lg;
 }
 
 .mobile-nav {
@@ -65,7 +66,7 @@ body {
 .nav-item {
   @apply flex flex-col items-center py-2 px-3 transition-all duration-200;
   /* Tap feedback */
-  -webkit-tap-highlight-color: rgba(79, 70, 229, 0.1);
+  -webkit-tap-highlight-color: rgba(2, 62, 115, 0.1);
   transform: scale(1);
 }
 
@@ -75,7 +76,7 @@ body {
 }
 
 .nav-item.active {
-  @apply text-indigo-600;
+  color: #023E73;
 }
 
 .nav-item:not(.active) {

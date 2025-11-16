@@ -77,7 +77,7 @@ export class MobilePerformanceOptimizer {
     const criticalResources = [
       '/icons/icon-192x192.png',
       '/icons/icon-512x512.png',
-      '/src/aventuri.png'
+      '/src/campori.png'
     ];
 
     criticalResources.forEach(src => {

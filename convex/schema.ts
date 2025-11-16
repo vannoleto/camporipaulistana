@@ -13,52 +13,83 @@ const applicationTables = {
     totalScore: v.number(),
     isActive: v.boolean(),
     membersCount: v.optional(v.number()),
-    classification: v.optional(v.string()), // HERÓI, FIEL ESCUDEIRO, APRENDIZ
+    classification: v.optional(v.string()), // OURO, PRATA, BRONZE, PARTICIPACAO
     // Pontuações detalhadas
     scores: v.optional(v.object({
       prerequisites: v.object({
-        photos: v.number(), // 0, 300
-        directorPresence: v.number(), // 0, 50
+        directorPresence: v.number(), // 0, 30
+      }),
+      campground: v.object({
+        portal: v.number(), // 0, 20, 40
+        clothesline: v.number(), // 0, 5, 10
+        pioneers: v.number(), // 0, 5, 10
+        campfireArea: v.number(), // 0, 5, 10
+        materials: v.number(), // 0, 5, 10
+        tentOrganization: v.number(), // 0, 20, 40
+        security: v.number(), // 0, 20, 40
+        readyCamp: v.number(), // 0, 40, 80
+        chairsOrBench: v.number(), // 0, 20, 40
+      }),
+      kitchen: v.object({
+        tentSetup: v.number(), // 0, 10, 20
+        identification: v.number(), // 0, 5, 10
+        tentSize: v.number(), // 0, 5, 10
+        gasRegister: v.number(), // 0, 10, 20
+        firePosition: v.number(), // 0, 5, 10
+        refrigerator: v.number(), // 0, 5, 10
+        tables: v.number(), // 0, 10
+        extinguisher: v.number(), // 0, 20
+        menu: v.number(), // 0, 30
+        menuDisplay: v.number(), // 0, 5, 10
+        containers: v.number(), // 0, 5, 10
+        uniform: v.number(), // 0, 5, 10
+        handSanitizer: v.number(), // 0, 5, 10
+        washBasin: v.number(), // 0, 5, 10
+        cleaning: v.number(), // 0, 10, 20
+        water: v.number(), // 0, 5, 10
+        identification2: v.number(), // 0, 5, 10
       }),
       participation: v.object({
-        opening: v.number(), // 0, 30, 100
-        saturdayMorning: v.number(), // 0, 30, 100
-        saturdayNight: v.number(), // 0, 30, 100
-        saturdayMeeting: v.number(), // 0, 50
-        sundayMeeting: v.number(), // 0, 50
+        opening: v.number(), // 0, 30, 60
+        saturdayMorning: v.number(), // 0, 30, 60
+        saturdayEvening: v.number(), // 0, 30, 60
+        sundayMorning: v.number(), // 0, 30, 60
+        saturdayAfternoon: v.number(), // 0, 30, 60
+        sundayEvening: v.number(), // 0, 30, 60
+        directorMeetingFriday: v.number(), // 0, 30
+        directorMeetingSaturday: v.number(), // 0, 30
       }),
-      general: v.object({
-        firstAidKit: v.number(), // 0, 150, 300
-        secretaryFolder: v.number(), // 0, 250, 500
-        doorIdentification: v.number(), // 0, 200
-        badges: v.number(), // 0, 200
-        uniform: v.number(), // 0, 50, 100
+      uniform: v.object({
+        programmedUniform: v.number(), // 0, 40, 80
+        badges: v.number(), // 0, 20, 40
+      }),
+      secretary: v.object({
+        firstAidKit: v.number(), // 0, 50, 100
+        secretaryFolder: v.number(), // 0, 50, 100
+        healthFolder: v.number(), // 0, 50, 100
       }),
       events: v.object({
-        twelveHour: v.number(), // 0, 100
-        carousel: v.object({
-          abel: v.number(), // 0, 100
-          jacob: v.number(), // 0, 100
-          samson: v.number(), // 0, 100
-          rahab: v.number(), // 0, 100
-          gideon: v.number(), // 0, 100
-          barak: v.number(), // 0, 100
-        }),
+        carousel: v.number(), // 0, 200
+        extraActivities: v.number(), // 0, 100
+        representative: v.number(), // 0, 50
       }),
       bonus: v.object({
-        pastorVisit: v.number(), // 0, 100
-        adultVolunteer: v.number(), // 0, 100
+        pastorVisit: v.number(), // 0, 50
         healthProfessional: v.number(), // 0, 100
       }),
       demerits: v.object({
-        driverIssues: v.number(), // negativo
-        lackReverence: v.number(), // negativo
-        noBadge: v.number(), // negativo
-        unaccompaniedChild: v.number(), // negativo
-        unauthorizedVisits: v.number(), // negativo
-        vandalism: v.number(), // negativo
-        silenceViolation: v.number(), // negativo
+        noIdentification: v.number(), // negativo
+        unaccompanied: v.number(), // negativo
+        inappropriate: v.number(), // negativo
+        campingActivity: v.number(), // negativo
+        interference: v.number(), // negativo
+        improperClothing: v.number(), // negativo
         disrespect: v.number(), // negativo
+        improperBehavior: v.number(), // negativo
+        substances: v.number(), // negativo
+        sexOpposite: v.number(), // negativo
+        artificialFires: v.number(), // negativo
+        unauthorizedVehicles: v.number(), // negativo
       }),
     })),
   }).index("by_region", ["region"])
