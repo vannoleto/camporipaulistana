@@ -2979,34 +2979,42 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 </div>
 
                 {/* Lista de Requisitos */}
-                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                  {Object.entries(categoryData).map(([key, criterion]: [string, any]) => (
-                    <div key={key} className="bg-white/60 p-2 rounded-lg text-xs">
-                      <div className="flex justify-between items-start gap-2">
-                        <p className="text-gray-800 flex-1">{criterion.description}</p>
-                        <button
-                          onClick={() => openEditModal(category.id, key, criterion)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <Settings size={14} />
-                        </button>
-                      </div>
-                      <p className="text-gray-500 mt-1">
-                        Max: {criterion.max}pts
-                        {criterion.partial > 0 && ` • Parcial: ${criterion.partial}pts`}
-                      </p>
+                <div className="space-y-2 mb-4 min-h-[100px]">
+                  {criteriaCount === 0 ? (
+                    <div className="bg-white/60 p-4 rounded-lg text-center border-2 border-dashed border-gray-300">
+                      <p className="text-gray-500 text-sm mb-2">Nenhum requisito cadastrado</p>
+                      <button
+                        onClick={() => setActiveTab('criteria')}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium underline"
+                      >
+                        Ir para aba Critérios →
+                      </button>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {Object.entries(categoryData).map(([key, criterion]: [string, any]) => (
+                        <div key={key} className="bg-white/60 p-3 rounded-lg text-sm border border-gray-200 hover:border-blue-300 transition-all">
+                          <div className="flex justify-between items-start gap-3 mb-2">
+                            <p className="text-gray-800 flex-1 font-medium">{criterion.description}</p>
+                            <button
+                              onClick={() => openEditModal(category.id, key, criterion)}
+                              className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors flex-shrink-0"
+                              title="Editar requisito"
+                            >
+                              <Settings size={16} />
+                            </button>
+                          </div>
+                          <p className="text-gray-600 text-xs">
+                            Max: <span className="font-semibold">{criterion.max}pts</span>
+                            {criterion.partial > 0 && (
+                              <> • Parcial: <span className="font-semibold">{criterion.partial}pts</span></>
+                            )}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Botão Adicionar */}
-                <button
-                  onClick={() => openCreateModal(category.id)}
-                  className="w-full bg-white/80 hover:bg-white text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 border border-gray-300"
-                >
-                  <span className="text-xl">+</span>
-                  Novo Requisito
-                </button>
               </div>
             );
           })}

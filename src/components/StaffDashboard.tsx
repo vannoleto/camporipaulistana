@@ -49,25 +49,16 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   // Esta função é dinâmica e não requer manutenção manual
   const createCompleteScoresStructure = (existingScores: any = {}, criteria: any = null) => {
     if (!criteria) {
-      // Fallback para estrutura mínima se critérios não estiverem carregados
-      return {
-        prerequisites: { photos: 0, directorPresence: 0 },
-        participation: { opening: 0, saturdayMorning: 0, saturdayNight: 0, saturdayMeeting: 0, sundayMeeting: 0 },
-        general: { firstAidKit: 0, secretaryFolder: 0, doorIdentification: 0, badges: 0, uniform: 0 },
-        events: { twelveHour: 0, carousel: { abel: 0, jacob: 0, samson: 0, rahab: 0, gideon: 0, barak: 0 } },
-        bonus: { pastorVisit: 0, adultVolunteer: 0, healthProfessional: 0 },
-        demerits: { driverIssues: 0, lackReverence: 0, noBadge: 0, unaccompaniedChild: 0, unauthorizedVisits: 0, vandalism: 0, silenceViolation: 0, disrespect: 0 },
-      };
+      // Se critérios não carregados, retornar estrutura vazia
+      return {};
     }
 
-    // Gerar estrutura dinamicamente baseada nos critérios carregados
+    // Gerar estrutura dinamicamente baseada em TODAS as categorias dos critérios
     const scores: any = {};
     
-    // Mapear categorias válidas do schema do Convex
-    const validCategories = ['prerequisites', 'participation', 'general', 'events', 'bonus', 'demerits'];
-    
-    validCategories.forEach(category => {
-      if (criteria[category]) {
+    // Iterar por TODAS as categorias que existem nos critérios
+    Object.keys(criteria).forEach(category => {
+      if (criteria[category] && typeof criteria[category] === 'object') {
         scores[category] = {};
         
         Object.entries(criteria[category]).forEach(([key, item]: [string, any]) => {
@@ -189,13 +180,14 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   const renderEvaluationForm = () => {
     if (!selectedClub || !scoringCriteria) return null;
 
-    // Mapear apenas as categorias que existem no schema do Convex
-    const validCategories = ['prerequisites', 'participation', 'general', 'events', 'bonus', 'demerits'];
-    
+    // Mapeamento de nomes e ícones para TODAS as categorias
     const categoryNames: any = {
       prerequisites: "Pré-requisitos",
+      campground: "Área de Acampamento",
+      kitchen: "Cozinha",
       participation: "Participação",
-      general: "Critérios Gerais",
+      uniform: "Uniforme",
+      secretary: "Secretaria",
       events: "Eventos/Provas",
       bonus: "Bônus",
       demerits: "Deméritos"
@@ -203,8 +195,11 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
 
     const categoryIcons: any = {
       prerequisites: <CheckCircle size={20} />,
+      campground: <Building2 size={20} />,
+      kitchen: <Trophy size={20} />,
       participation: <Users size={20} />,
-      general: <FileText size={20} />,
+      uniform: <Shield size={20} />,
+      secretary: <FileText size={20} />,
       events: <Trophy size={20} />,
       bonus: <Award size={20} />,
       demerits: <X size={20} />
@@ -247,12 +242,22 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
           </div>
         </div>
 
-        {/* Critérios de pontuação - apenas categorias válidas do schema */}
+        {/* Critérios de pontuação - TODAS as categorias dinâmicas */}
         <div className="space-y-4">
           {Object.entries(scoringCriteria)
-            .filter(([category]) => validCategories.includes(category))
+            .filter(([category, criteria]: [string, any]) => {
+              // Mostrar apenas categorias que têm conteúdo
+              const hasContent = criteria && typeof criteria === 'object' && Object.keys(criteria).length > 0;
+              console.log(`Category ${category}: hasContent=${hasContent}`);
+              return hasContent;
+            })
             .map(([category, criteria]: [string, any]) => {
-            if (!criteria || typeof criteria !== 'object' || Object.keys(criteria).length === 0) return null;
+            if (!criteria || typeof criteria !== 'object' || Object.keys(criteria).length === 0) {
+              console.log(`Category ${category} is empty or invalid`);
+              return null;
+            }
+
+            console.log(`Rendering category ${category} with criteria:`, criteria);
 
             return (
               <div key={category} className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -265,10 +270,14 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                 
                 <div className="p-4 space-y-3">
                   {Object.entries(criteria).map(([key, item]: [string, any]) => {
+                    console.log(`Rendering criterion: category=${category}, key=${key}, item=`, item);
+                    
                     const currentValue = scores[category]?.[key] || 0;
                     const maxValue = item.max || 0;
                     const partialValue = item.partial || 0;
                     const isLocked = isCriteriaLocked(category, key);
+                    
+                    console.log(`Criterion values: max=${maxValue}, partial=${partialValue}, locked=${isLocked}`);
                     
                     return (
                       <div 

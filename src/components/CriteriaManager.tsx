@@ -12,11 +12,21 @@ export function CriteriaManager({ user }: CriteriaManagerProps) {
   const [selectedCategory, setSelectedCategory] = useState("prerequisites");
   const [bulkText, setBulkText] = useState("");
   const [newCriterion, setNewCriterion] = useState({
-    key: "",
     description: "",
     max: 0,
     partial: 0,
   });
+
+  // Função para gerar chave técnica a partir da descrição
+  const generateKey = (description: string): string => {
+    return description
+      .toLowerCase()
+      .normalize("NFD") // Remove acentos
+      .replace(/[\u0300-\u036f]/g, "") // Remove diacríticos
+      .replace(/[^a-z0-9\s]/g, "") // Remove caracteres especiais
+      .trim()
+      .replace(/\s+/g, "_"); // Substitui espaços por underscore
+  };
 
   const scoringCriteria = useQuery(api.scoring.getScoringCriteria, {});
   const createCriterion = useMutation(api.scoring.createScoringCriterion);
@@ -35,22 +45,24 @@ export function CriteriaManager({ user }: CriteriaManagerProps) {
   ];
 
   const handleAddCriterion = async () => {
-    if (!newCriterion.key || !newCriterion.description || newCriterion.max <= 0) {
+    if (!newCriterion.description || newCriterion.max <= 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
+    const generatedKey = generateKey(newCriterion.description);
+
     try {
       await createCriterion({
         category: selectedCategory,
-        key: newCriterion.key,
+        key: generatedKey,
         description: newCriterion.description,
         max: newCriterion.max,
         partial: newCriterion.partial || 0,
         adminId: user._id,
       });
-      toast.success("Critério adicionado com sucesso!");
-      setNewCriterion({ key: "", description: "", max: 0, partial: 0 });
+      toast.success(`Critério adicionado: ${generatedKey}`);
+      setNewCriterion({ description: "", max: 0, partial: 0 });
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar critério");
     }
@@ -69,7 +81,7 @@ export function CriteriaManager({ user }: CriteriaManagerProps) {
         const description = parts[0];
         const max = parseFloat(parts[1]) || 0;
         const partial = parts[2] ? parseFloat(parts[2]) : 0;
-        const key = `item_${Date.now()}_${index}`; // Gerar chave única
+        const key = generateKey(description); // Gerar chave a partir da descrição
 
         try {
           await createCriterion({
@@ -149,19 +161,6 @@ export function CriteriaManager({ user }: CriteriaManagerProps) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Chave Técnica (sem espaços)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ex: directorPresence"
-                  value={newCriterion.key}
-                  onChange={(e) => setNewCriterion({ ...newCriterion, key: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Descrição (aparece no app)
                 </label>
                 <input
@@ -171,6 +170,11 @@ export function CriteriaManager({ user }: CriteriaManagerProps) {
                   onChange={(e) => setNewCriterion({ ...newCriterion, description: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {newCriterion.description && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Chave gerada: <code className="bg-gray-100 px-1 py-0.5 rounded">{generateKey(newCriterion.description)}</code>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
