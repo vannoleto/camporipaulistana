@@ -1444,7 +1444,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 1, 
         title: "Boletim 01", 
         description: "Orientações Gerais",
-        url: "/boletins/boletim01.pdf",
+        url: "https://drive.google.com/file/d/1xpqKa9pOE38gRIarUtvtug_Zxmul6q0P/preview",
         icon: <FileTextIcon className="w-8 h-8" />,
         color: "from-gray-500 to-gray-600"
       },
@@ -1452,7 +1452,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 2, 
         title: "Boletim 02", 
         description: "Concursos",
-        url: "/boletins/boletim02.pdf",
+        url: "https://drive.google.com/file/d/1eepGtq06Csn8IuDjJib44DUB73gQqYt7/preview",
         icon: <Trophy className="w-8 h-8" />,
         color: "from-orange-500 to-orange-600"
       },
@@ -1460,7 +1460,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 3, 
         title: "Boletim 03 Verde", 
         description: "Atendimento",
-        url: "/boletins/boletim03.pdf",
+        url: "https://drive.google.com/file/d/1hpUzpPKg79skBc91QngFuC_jOAsYbWvO/preview",
         icon: <Heart className="w-8 h-8" />,
         color: "from-green-500 to-green-600"
       },
@@ -1468,7 +1468,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 4, 
         title: "Boletim 04 Vinho", 
         description: "Estrutura",
-        url: "/boletins/boletim04.pdf",
+        url: "https://drive.google.com/file/d/1Z61FcoN6OB0ExSa2m5a0jEPMkd9hxKBr/preview",
         icon: <Building2 className="w-8 h-8" />,
         color: "from-red-700 to-red-800"
       },
@@ -1476,7 +1476,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 5, 
         title: "Boletim 05 Amarelo", 
         description: "Eventos",
-        url: "/boletins/boletim05.pdf",
+        url: "https://drive.google.com/file/d/1RHR9M256JbMMpAufPMcEcS-ugKMIgtfi/preview",
         icon: <Calendar className="w-8 h-8" />,
         color: "from-yellow-500 to-yellow-600"
       },
@@ -1484,7 +1484,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 6, 
         title: "Boletim 06 Azul", 
         description: "Programa",
-        url: "/boletins/boletim06.pdf",
+        url: "https://drive.google.com/file/d/1_bl-Vz5x5BRd6p-ChraWzrCUd7Q_Iilf/preview",
         icon: <Newspaper className="w-8 h-8" />,
         color: "from-blue-500 to-blue-600"
       },
@@ -1508,8 +1508,9 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               <p className="text-sm text-white/80">{selectedBulletin.description}</p>
             </div>
             <a
-              href={selectedBulletin.url}
-              download
+              href={selectedBulletin.url.replace('/preview', '/view')}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
             >
               <Download size={20} />
