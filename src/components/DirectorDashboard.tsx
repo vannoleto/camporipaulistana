@@ -1444,7 +1444,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 1, 
         title: "Boletim 01", 
         description: "Orientações Gerais",
-        url: "/src/boletins/boletim01.pdf",
+        url: "/boletins/boletim01.pdf",
         icon: <FileTextIcon className="w-8 h-8" />,
         color: "from-gray-500 to-gray-600"
       },
@@ -1452,7 +1452,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 2, 
         title: "Boletim 02", 
         description: "Concursos",
-        url: "/src/boletins/boletim02.pdf",
+        url: "/boletins/boletim02.pdf",
         icon: <Trophy className="w-8 h-8" />,
         color: "from-orange-500 to-orange-600"
       },
@@ -1460,7 +1460,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 3, 
         title: "Boletim 03 Verde", 
         description: "Atendimento",
-        url: "/src/boletins/boletim03.pdf",
+        url: "/boletins/boletim03.pdf",
         icon: <Heart className="w-8 h-8" />,
         color: "from-green-500 to-green-600"
       },
@@ -1468,7 +1468,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 4, 
         title: "Boletim 04 Vinho", 
         description: "Estrutura",
-        url: "/src/boletins/boletim04.pdf",
+        url: "/boletins/boletim04.pdf",
         icon: <Building2 className="w-8 h-8" />,
         color: "from-red-700 to-red-800"
       },
@@ -1476,7 +1476,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 5, 
         title: "Boletim 05 Amarelo", 
         description: "Eventos",
-        url: "/src/boletins/boletim05.pdf",
+        url: "/boletins/boletim05.pdf",
         icon: <Calendar className="w-8 h-8" />,
         color: "from-yellow-500 to-yellow-600"
       },
@@ -1484,7 +1484,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         id: 6, 
         title: "Boletim 06 Azul", 
         description: "Programa",
-        url: "/src/boletins/boletim06.pdf",
+        url: "/boletins/boletim06.pdf",
         icon: <Newspaper className="w-8 h-8" />,
         color: "from-blue-500 to-blue-600"
       },
