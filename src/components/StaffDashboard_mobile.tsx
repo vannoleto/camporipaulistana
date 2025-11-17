@@ -69,7 +69,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
       await updateClubScores({
         clubId: selectedClub._id,
         scores: formData,
-        staffId: user._id,
+        userId: user._id,
       });
       toast.success("Pontuações salvas com sucesso!");
       setFormData({});

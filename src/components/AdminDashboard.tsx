@@ -131,7 +131,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const deleteUser = useMutation(api.users.deleteUser);
     const initializeClubs = useMutation(api.clubs.initializeClubs);
     const resetClubsToMaxScore = useMutation(api.clubs.resetAllClubScores);
-    const updateScoringCriteria = useMutation(api.scoring.updateScoringCriteria);
     const resetScoringCriteria = useMutation(api.scoring.resetScoringCriteria);
     const createScoringCriterion = useMutation(api.scoring.createScoringCriterion);
     const updateScoringCriterion = useMutation(api.scoring.updateScoringCriterion);
@@ -237,6 +236,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
+    let demeritsPenalty = 0;
 
     // Calcular penalidades baseado nos critérios dinâmicos
     Object.keys(scores).forEach(category => {
@@ -245,6 +245,18 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       const categoryScores = scores[category];
       if (typeof categoryScores !== 'object') return;
 
+      // DEMÉRITOS: São valores negativos, somar diretamente
+      if (category === 'demerits') {
+        Object.keys(categoryScores).forEach(key => {
+          const demeritValue = categoryScores[key];
+          if (typeof demeritValue === 'number') {
+            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+          }
+        });
+        return;
+      }
+
+      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
         if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
@@ -276,9 +288,9 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais
-    const finalScore = Math.max(0, MAX_SCORE - totalPenalty);
-    console.log(`📊 Admin calculateTotalScore: Penalidade Total=${totalPenalty}, Final=${finalScore}`);
+    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
+    const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+    console.log(`📊 Admin calculateTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
     return finalScore;
   };
 
@@ -294,14 +306,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     console.log("📝 AdminDashboard.updateScore called:", { category, subcategory, value });
     
     const actualValue = typeof value === 'string' ? parseInt(value) : value;
-    // Validar que pontuações não podem ser negativas (exceto para deméritos que são valores positivos representando penalidades)
+    
+    // Validar que pontuações não podem ser negativas (exceto deméritos que são sempre negativos)
     if (actualValue < 0 && category !== "demerits") {
       toast.error("Pontuações não podem ser negativas");
       return;
     }
 
-    // Buscar valor máximo permitido (incluindo parcial)
-    if (scoringCriteria) {
+    // Buscar valor máximo permitido (não aplicável para deméritos que podem ocorrer múltiplas vezes)
+    if (scoringCriteria && category !== "demerits") {
       let maxValue = 0;
       let itemData = null;
       
@@ -740,7 +753,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     if (!editingCriteria) return;
     
     try {
-      await updateScoringCriteria({
+      await updateScoringCriterion({
         criteria: editingCriteria,
         adminId: user._id,
       });
@@ -1351,15 +1364,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <div className="flex items-center space-x-2">
                   {isDemerits ? (
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600">Ocorrências:</span>
+                      <span className="text-sm text-gray-600">Quantidade:</span>
                       <input
                         type="number"
-                        value={Math.abs(Math.floor(currentValue / item.penalty)) || 0}
+                        value={Math.abs(currentValue / 100) || 0}
                         onChange={(e) => {
-                          const occurrences = parseInt(e.target.value) || 0;
-                          updateScore(category, key, Math.abs(occurrences * item.penalty));
+                          const quantity = parseInt(e.target.value) || 0;
+                          updateScore(category, key, -(quantity * 100));
                         }}
-                        className={`w-16 px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-20 px-2 py-1 border rounded text-center focus:ring-2 focus:ring-red-500 ${
                           isLocked ? 'bg-green-100 cursor-not-allowed' : ''
                         }`}
                         min={0}
@@ -1367,7 +1380,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                         disabled={isLocked}
                       />
                       <span className="text-sm font-medium text-red-600">
-                        ➝ Total: -{currentValue ? currentValue.toLocaleString() : 0} pts
+                        = {currentValue ? currentValue.toLocaleString() : 0} pts
                       </span>
                     </div>
                   ) : (
@@ -2992,15 +3005,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl font-bold">Sistema de Pontuação - XXI Campori Paulistana</h2>
-          
-          {/* Botão Reset */}
-          <button
-            onClick={handleResetCriteria}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <RotateCcw size={16} />
-            Resetar para Padrão
-          </button>
         </div>
 
         {/* Banner Info */}

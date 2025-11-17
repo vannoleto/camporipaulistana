@@ -36,6 +36,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [scores, setScores] = useState<any>({});
   const [lockedCriteria, setLockedCriteria] = useState<Set<string>>(new Set());
+  const [demeritInputs, setDemeritInputs] = useState<Record<string, number>>({});
 
   const clubs = useQuery(api.clubs.listClubs, {});
   const scoringCriteria = useQuery(api.scoring.getScoringCriteria, {});
@@ -212,6 +213,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
+    let demeritsPenalty = 0;
 
     console.log("=== CÁLCULO DE PONTUAÇÃO ===");
     console.log("Scores do clube:", clubScores);
@@ -221,6 +223,19 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     Object.keys(clubScores).forEach(category => {
       if (!scoringCriteria[category]) return;
 
+      // DEMÉRITOS: São valores negativos, somar diretamente
+      if (category === 'demerits') {
+        Object.keys(clubScores[category]).forEach(key => {
+          const demeritValue = clubScores[category][key];
+          if (typeof demeritValue === 'number') {
+            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+            console.log(`⚠ Demérito ${key}: ${demeritValue} → Penalidade: ${Math.abs(demeritValue)}`);
+          }
+        });
+        return;
+      }
+
+      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
       Object.keys(clubScores[category]).forEach(key => {
         // IMPORTANTE: Só calcular penalidade se o critério foi AVALIADO (locked)
         const criteriaKey = `${category}.${key}`;
@@ -263,10 +278,11 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     });
 
     console.log(`TOTAL DE PENALIDADES: ${totalPenalty}`);
-    console.log(`PONTUAÇÃO FINAL: ${MAX_SCORE} - ${totalPenalty} = ${MAX_SCORE - totalPenalty}`);
+    console.log(`DEMÉRITOS: ${demeritsPenalty}`);
+    console.log(`PONTUAÇÃO FINAL: ${MAX_SCORE} - ${totalPenalty} - ${demeritsPenalty} = ${MAX_SCORE - totalPenalty - demeritsPenalty}`);
 
-    // Pontuação final = Máximo - Penalidades totais
-    return Math.max(0, MAX_SCORE - totalPenalty);
+    // Pontuação final = Máximo - Penalidades totais - Deméritos
+    return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
   };
 
   // Função para calcular classificação
@@ -415,7 +431,50 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                         </div>
                         
                         {!isLocked ? (
-                          <div className="grid grid-cols-3 gap-2">
+                          // Se for DEMÉRITO, mostrar input + botão avaliar
+                          category === 'demerits' ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1">
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Quantidade de ocorrências:
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={demeritInputs[key] || 0}
+                                    onChange={(e) => {
+                                      const quantity = parseInt(e.target.value) || 0;
+                                      setDemeritInputs(prev => ({ ...prev, [key]: quantity }));
+                                    }}
+                                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-center text-lg font-bold focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="0"
+                                  />
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-600 mb-1">Penalidade</div>
+                                  <div className="text-2xl font-bold text-red-600">
+                                    {((demeritInputs[key] || 0) * -100).toLocaleString()}
+                                  </div>
+                                  <div className="text-xs text-gray-500">pontos</div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const quantity = demeritInputs[key] || 0;
+                                  const demeritValue = -(quantity * 100);
+                                  applyScore(category, key, demeritValue);
+                                  setDemeritInputs(prev => ({ ...prev, [key]: 0 })); // Resetar input
+                                }}
+                                className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+                              >
+                                <CheckCircle size={20} />
+                                Avaliar Demérito
+                              </button>
+                            </div>
+                          ) : (
+                            // Para outras categorias, manter os 3 botões
+                            <div className="grid grid-cols-3 gap-2">
                             {/* Botão Pontuação Total */}
                             <button
                               onClick={() => applyScore(category, key, maxValue)}
@@ -452,6 +511,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                               <span className="text-sm font-bold">0</span>
                             </button>
                           </div>
+                          )
                         ) : (
                           <div className="bg-green-100 border border-green-300 rounded-lg p-3">
                             <div className="flex items-center justify-center mb-2">

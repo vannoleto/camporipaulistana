@@ -1,69 +1,27 @@
 {
-  "name": "XXI CAMPORI PAULISTANA - ATÉ OS CONFINS DA TERRA",
-  "short_name": "Aventuri 2025",
+  "name": "Campori Paulistana",
+  "short_name": "Campori AP",
   "description": "Sistema de Pontuação do XXI Campori da Paulistana - Até os Confins da Terra",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
-  "orientation": "portrait",
+  "background_color": "#023e73",
+  "theme_color": "#8936FF",
+  "orientation": "any",
   "scope": "/",
-  "lang": "pt-BR",
-  "categories": ["productivity", "business"],
+  "lang": "pt-PT",
+  "dir": "auto",
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
+      "purpose": "maskable",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "src": "icon512_maskable.png",
+      "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512-maskable.png",
+      "purpose": "any",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "icon512_rounded.png",
+      "type": "image/png"
     }
   ]
 }

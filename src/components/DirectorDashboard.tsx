@@ -258,6 +258,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
+    let demeritsPenalty = 0;
 
     // Calcular penalidades baseado nos critérios dinâmicos
     Object.keys(scores).forEach(category => {
@@ -266,6 +267,18 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
       const categoryScores = scores[category];
       if (typeof categoryScores !== 'object') return;
 
+      // DEMÉRITOS: São valores negativos, somar diretamente
+      if (category === 'demerits') {
+        Object.keys(categoryScores).forEach(key => {
+          const demeritValue = categoryScores[key];
+          if (typeof demeritValue === 'number') {
+            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+          }
+        });
+        return;
+      }
+
+      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
         if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
@@ -297,8 +310,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais
-    return Math.max(0, MAX_SCORE - totalPenalty);
+    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
+    return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
   };
 
   // Função para obter classificação baseada na pontuação
