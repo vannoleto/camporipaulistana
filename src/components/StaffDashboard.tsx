@@ -645,24 +645,219 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
 
   // Renderizar aba de programação
   const renderScheduleTab = () => {
+    const scheduleData = [
+      {
+        day: "Quinta-feira",
+        date: "20/11/2025",
+        events: [
+          { time: "8h", title: "Abertura de portões e montagem da área de acampamento", location: "Chegada dos clubes e liberação do check-in que deve ser feito na secretaria" },
+          { time: "14h", title: "Tomada de eventos + Atividades extras", location: "Conforme escala por região" },
+          { time: "18h30", title: "Jantar", location: "" },
+          { time: "19h30", title: "Pré-programa", location: "" },
+          { time: "20h", title: "Abertura XXI Campori", location: "" },
+          { time: "20h30", title: "Reunião de diretores", location: "Presença facultativa" },
+          { time: "22h30", title: "Horário de silêncio", location: "" },
+        ]
+      },
+      {
+        day: "Sexta-feira",
+        date: "21/11/2025",
+        events: [
+          { time: "6h", title: "Despertar", location: "" },
+          { time: "6h30", title: "Devoção matinal", location: "Individualmente ou por unidade" },
+          { time: "6h30", title: "Reunião de diretoria", location: "" },
+          { time: "7h", title: "Desjejum", location: "" },
+          { time: "7h45", title: "Pré-programa", location: "" },
+          { time: "8h", title: "Programa matinal", location: "" },
+          { time: "9h", title: "Carrossel de eventos + Atividades extras", location: "Conforme escala por região" },
+          { time: "10h", title: "Finais concursos", location: "Conforme quadro de concursos" },
+          { time: "12h", title: "Almoço", location: "" },
+          { time: "13h", title: "Finais concursos", location: "Conforme quadro de concursos" },
+          { time: "13h", title: "Carrossel de eventos + Atividades extras", location: "Conforme escala por região" },
+          { time: "14h30", title: "Início do 24h", location: "Concentração no palco da arena" },
+          { time: "17h45", title: "Culto de pôr-do-sol", location: "A ser realizado no próprio clube" },
+          { time: "18h30", title: "Jantar", location: "" },
+          { time: "19h30", title: "Pré-programa", location: "" },
+          { time: "20h", title: "Programa noturno", location: "Investiduras" },
+          { time: "22h30", title: "Horário de silêncio", location: "" },
+        ]
+      },
+      {
+        day: "Sábado",
+        date: "22/11/2025",
+        events: [
+          { time: "6h30", title: "Despertar", location: "" },
+          { time: "7h", title: "Devoção matinal", location: "Individualmente ou por unidade" },
+          { time: "7h", title: "Reunião de diretoria", location: "" },
+          { time: "7h30", title: "Desjejum", location: "" },
+          { time: "8h", title: "Início da inspeção de uniforme", location: "Uniforme A e banderim" },
+          { time: "8h45", title: "Pré-programa", location: "" },
+          { time: "9h", title: "Culto de adoração", location: "" },
+          { time: "11h", title: "Escola Sabatina", location: "Com clube-amigo" },
+          { time: "12h", title: "Almoço", location: "" },
+          { time: "13h", title: "Finais concursos", location: "Conforme quadro de concursos" },
+          { time: "16h", title: "Programa vespertino", location: "Com retorno do 24h" },
+          { time: "18h", title: "Jantar", location: "" },
+          { time: "19h", title: "Finais concursos", location: "Conforme quadro de concursos" },
+          { time: "20h", title: "Livre", location: "Brinquedos, esportes, Shopping Campori e atividades extras" },
+          { time: "22h30", title: "Fogo do Conselho", location: "" },
+          { time: "23h30", title: "Horário de silêncio", location: "" },
+        ]
+      },
+      {
+        day: "Domingo",
+        date: "23/11/2025",
+        events: [
+          { time: "7h", title: "Despertar", location: "" },
+          { time: "7h30", title: "Devoção matinal", location: "Individualmente ou por unidade" },
+          { time: "8h", title: "Reunião de diretoria", location: "Com Desjejum" },
+          { time: "8h45", title: "Pré-programa", location: "" },
+          { time: "9h", title: "Encerramento XXI Campori", location: "" },
+          { time: "11h", title: "Entrega de troféus", location: "" },
+          { time: "11h", title: "Desmontagem da área de acampamento", location: "Check-out deve ser feito na secretaria" },
+          { time: "11h30", title: "Atividades extras", location: "Conforme escala por região" },
+          { time: "16h", title: "Fechamento dos portões", location: "" },
+        ]
+      }
+    ];
+
+    const concursos = [
+      { name: "Quem Sabe Prova", categories: [
+        { type: "Prova objetiva", day: "Sábado", time: "13h", location: "Restaurante" },
+        { type: "Grande final", day: "Sábado", time: "19h", location: "Auditório" },
+      ]},
+      { name: "The Voice Paulistana", categories: [
+        { type: "Voz", day: "Sábado", time: "13h", location: "Auditório do Estúdio" },
+        { type: "Instrumento", day: "Sexta", time: "15h", location: "Auditório do Estúdio" },
+      ]},
+      { name: "Pregador Mirim", categories: [
+        { type: "10-12 anos", day: "Sábado", time: "13h", location: "Rádio" },
+        { type: "13-15 anos", day: "Sexta", time: "13h", location: "Rádio" },
+        { type: "16-21 anos", day: "Sexta", time: "17h", location: "Rádio" },
+      ]},
+      { name: "Ordem Unida", categories: [
+        { type: "Conjunto", day: "Sábado", time: "19h", location: "Quadra 1" },
+        { type: "Geométrica", day: "Sábado", time: "19h", location: "Quadra 2" },
+        { type: "Evolução", day: "Sábado", time: "19h", location: "Quadra 3" },
+        { type: "Fanfarra", day: "Sexta", time: "10h", location: "Quadra 1" },
+      ]},
+    ];
+
+    const atividadesExtras = [
+      { name: "MAB", items: [
+        { type: "Museu", days: "Quinta - Domingo", schedule: "Conforme escala" },
+        { type: "Jardim", days: "Quinta - Domingo", schedule: "Conforme escala" },
+      ]},
+      { name: "Especialidades", items: [
+        { type: "Skate", days: "Quinta - Sexta", schedule: "Conforme agendamento prévio" },
+        { type: "Dinossauros", days: "Quinta - Sexta", schedule: "Conforme agendamento prévio" },
+        { type: "Troca de pins", days: "Quinta - Sábado", schedule: "Conforme agendamento prévio" },
+      ]},
+      { name: "Centro White", items: [
+        { type: "—", days: "Quinta - Sexta, Domingo", schedule: "Conforme agendamento prévio" },
+      ]},
+      { name: "Gravação da Bíblia", items: [
+        { type: "—", days: "Quinta - Sábado", schedule: "" },
+      ]},
+      { name: "Save Point", items: [
+        { type: "Ludoteca", days: "Quinta - Domingo", schedule: "Conforme escala" },
+        { type: "Campeonato de Excelência", days: "Quinta - Sexta", schedule: "Conforme agendamento prévio" },
+      ]},
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-gradient-to-r from-campori-brown to-campori-darkRed text-white p-6 rounded-xl shadow-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar size={32} />
-            <div>
-              <h3 className="text-xl font-bold">Programação do Evento</h3>
-              <p className="text-sm opacity-90">XXI Campori Paulistana</p>
+      <div className="p-4 space-y-4 pb-24">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
+          📅 Cronograma XXI Campori Paulistana
+        </h2>
+
+        {/* Programação por dia */}
+        {scheduleData.map((day, idx) => (
+          <div key={idx} className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-campori-brown to-campori-darkRed text-white p-3">
+              <h3 className="text-lg font-bold">{day.day}</h3>
+              <p className="text-sm opacity-90">{day.date}</p>
             </div>
+            <div className="divide-y divide-gray-200">
+              {day.events.map((event, eventIdx) => (
+                <div key={eventIdx} className="p-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-14">
+                      <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-campori-brown bg-orange-100 rounded">
+                        {event.time}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                      {event.location && (
+                        <p className="text-xs text-gray-600 mt-1">{event.location}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Quadro de Concursos */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-6">
+          <div className="bg-orange-600 text-white p-3">
+            <h3 className="text-lg font-bold">🏆 Quadro de Concursos</h3>
+          </div>
+          <div className="p-4 space-y-4">
+            {concursos.map((concurso, idx) => (
+              <div key={idx}>
+                <h4 className="font-bold text-orange-800 mb-2">{concurso.name}</h4>
+                <div className="space-y-2">
+                  {concurso.categories.map((cat, catIdx) => (
+                    <div key={catIdx} className="bg-gray-50 p-3 rounded-lg">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <span className="font-medium text-gray-700">{cat.type}</span>
+                        <span className="text-gray-600">{cat.day} - {cat.time}</span>
+                        <span className="col-span-2 text-xs text-gray-500">📍 {cat.location}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-          <Calendar size={64} className="mx-auto mb-4 text-gray-300" />
-          <h4 className="font-semibold text-gray-800 mb-2">Programação em Breve</h4>
-          <p className="text-sm text-gray-600">
-            A programação completa do evento será disponibilizada em breve. Fique atento!
-          </p>
+        {/* Atividades Extras */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-purple-600 text-white p-3">
+            <h3 className="text-lg font-bold">✨ Atividades Extras</h3>
+          </div>
+          <div className="p-4 space-y-4">
+            {atividadesExtras.map((atividade, idx) => (
+              <div key={idx}>
+                <h4 className="font-bold text-purple-800 mb-2">{atividade.name}</h4>
+                <div className="space-y-2">
+                  {atividade.items.map((item, itemIdx) => (
+                    <div key={itemIdx} className="bg-gray-50 p-3 rounded-lg text-sm">
+                      {item.type !== "—" && <div className="font-medium text-gray-700 mb-1">{item.type}</div>}
+                      <div className="text-xs text-gray-600">
+                        <span className="font-semibold">📅 {item.days}</span>
+                        {item.schedule && <span className="ml-2">• {item.schedule}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-medium text-yellow-800 mb-2">⚠️ Informações Importantes:</h4>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            <li>• Presença obrigatória em cultos e programas oficiais</li>
+            <li>• Check-in e check-out devem ser feitos na secretaria</li>
+            <li>• Horário de silêncio deve ser rigorosamente cumprido</li>
+            <li>• Verifique o quadro de avisos para atualizações</li>
+          </ul>
         </div>
       </div>
     );
