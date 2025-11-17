@@ -28,6 +28,7 @@ import {
   Shield,
   Calendar,
   ArrowRight,
+  ArrowLeft,
   ArrowUp,
   ArrowDown,
   UserCheck,
@@ -52,7 +53,10 @@ import {
   Download,
   Copy,
   Zap,
-  Car
+  Car,
+  FileText as FileTextIcon,
+  Newspaper,
+  BookOpen
 } from "lucide-react";
 
 interface DirectorDashboardProps {
@@ -222,6 +226,7 @@ function QRCodeDisplay({ club }: { club: any }) {
 
 export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab }: DirectorDashboardProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("home");
+  const [selectedBulletin, setSelectedBulletin] = useState<any>(null);
   
   // Usar activeTab interno para controle local
   const activeTab = internalActiveTab;
@@ -822,8 +827,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <div className="text-2xl font-bold text-yellow-600">
-                  {currentScores.secretary.firstAidKit + currentScores.secretary.secretaryFolder + 
-                   currentScores.secretary.healthFolder}
+                  {(currentScores?.secretary?.firstAidKit || 0) + (currentScores?.secretary?.secretaryFolder || 0) + 
+                   (currentScores?.secretary?.healthFolder || 0)}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Secretário</div>
               </div>
@@ -1432,25 +1437,172 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
   const renderScoringContent = () => renderScoring();
   const renderHistoryContent = () => renderHistory();
 
+  // Renderizar tela de Boletins
+  const renderBulletins = () => {
+    const bulletins = [
+      { 
+        id: 1, 
+        title: "Boletim 01", 
+        description: "Orientações Gerais",
+        url: "/src/boletins/boletim01.pdf",
+        icon: <FileTextIcon className="w-8 h-8" />,
+        color: "from-gray-500 to-gray-600"
+      },
+      { 
+        id: 2, 
+        title: "Boletim 02", 
+        description: "Concursos",
+        url: "/src/boletins/boletim02.pdf",
+        icon: <Trophy className="w-8 h-8" />,
+        color: "from-orange-500 to-orange-600"
+      },
+      { 
+        id: 3, 
+        title: "Boletim 03 Verde", 
+        description: "Atendimento",
+        url: "/src/boletins/boletim03.pdf",
+        icon: <Heart className="w-8 h-8" />,
+        color: "from-green-500 to-green-600"
+      },
+      { 
+        id: 4, 
+        title: "Boletim 04 Vinho", 
+        description: "Estrutura",
+        url: "/src/boletins/boletim04.pdf",
+        icon: <Building2 className="w-8 h-8" />,
+        color: "from-red-700 to-red-800"
+      },
+      { 
+        id: 5, 
+        title: "Boletim 05 Amarelo", 
+        description: "Eventos",
+        url: "/src/boletins/boletim05.pdf",
+        icon: <Calendar className="w-8 h-8" />,
+        color: "from-yellow-500 to-yellow-600"
+      },
+      { 
+        id: 6, 
+        title: "Boletim 06 Azul", 
+        description: "Programa",
+        url: "/src/boletins/boletim06.pdf",
+        icon: <Newspaper className="w-8 h-8" />,
+        color: "from-blue-500 to-blue-600"
+      },
+    ];
+
+    // Se um boletim está selecionado, mostrar o PDF
+    if (selectedBulletin) {
+      return (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Header do visualizador */}
+          <div className="bg-gradient-to-r from-campori-navy to-campori-darkGreen text-white p-4 shadow-lg flex items-center justify-between">
+            <button
+              onClick={() => setSelectedBulletin(null)}
+              className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
+            >
+              <ArrowLeft size={20} />
+              <span className="font-medium">Voltar</span>
+            </button>
+            <div className="text-center flex-1">
+              <h2 className="font-bold text-lg">{selectedBulletin.title}</h2>
+              <p className="text-sm text-white/80">{selectedBulletin.description}</p>
+            </div>
+            <a
+              href={selectedBulletin.url}
+              download
+              className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
+            >
+              <Download size={20} />
+            </a>
+          </div>
+
+          {/* PDF Viewer */}
+          <div className="flex-1 bg-gray-100">
+            <iframe
+              src={selectedBulletin.url}
+              className="w-full h-full border-0"
+              title={selectedBulletin.title}
+              allow="autoplay"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Lista de boletins
+    return (
+      <div className="p-4 space-y-4 pb-24">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            📰 Boletins do Campori
+          </h2>
+          <p className="text-sm text-gray-600">
+            Clique em um boletim para visualizar
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {bulletins.map((bulletin) => (
+            <button
+              key={bulletin.id}
+              onClick={() => setSelectedBulletin(bulletin)}
+              className="group relative overflow-hidden bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${bulletin.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+              
+              <div className="p-6 flex items-center space-x-4">
+                <div className={`flex-shrink-0 w-16 h-16 rounded-lg bg-gradient-to-br ${bulletin.color} flex items-center justify-center text-white shadow-lg`}>
+                  {bulletin.icon}
+                </div>
+                
+                <div className="flex-1 text-left">
+                  <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                    {bulletin.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {bulletin.description}
+                  </p>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+          <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+            <FileTextIcon size={18} />
+            Informação
+          </h4>
+          <p className="text-sm text-blue-700">
+            Toque em qualquer boletim para visualizar o PDF completo. Use o botão de download para salvar uma cópia.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     const currentTab = externalActiveTab || internalActiveTab;
     switch (currentTab) {
       case "home": return renderHome();
-      case "club": return renderOverview();
-      case "home": return renderHome();
+      case "bulletins": return renderBulletins();
       case "schedule": return renderSchedule();
       case "reports": return renderScoring();
       case "profile": return renderHistory();
-      default: return renderOverview();
+      default: return renderHome();
     }
   };
 
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const tabs = [
-    { id: "club", name: "Clube", icon: <Users size={20} /> },
+    { id: "bulletins", name: "Boletins", icon: <Newspaper size={20} /> },
     { id: "schedule", name: "Cronograma", icon: <Calendar size={20} /> },
-    { id: "home", name: "Início", icon: <Home size={20} />, highlighted: true },
+    { id: "home", name: "Início", icon: <Home size={20} /> },
     { id: "reports", name: "Relatórios", icon: <BarChart3 size={20} /> },
     { id: "profile", name: "Histórico", icon: <Clock size={20} /> },
   ];
@@ -1551,12 +1703,6 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab.highlighted && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                </span>
-              )}
               {tab.id === "home" ? (
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-campori-navy to-campori-darkGreen flex items-center justify-center shadow-md">
