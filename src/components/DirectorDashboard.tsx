@@ -56,7 +56,10 @@ import {
   Car,
   FileText as FileTextIcon,
   Newspaper,
-  BookOpen
+  BookOpen,
+  Map,
+  School,
+  ClipboardCheck
 } from "lucide-react";
 
 interface DirectorDashboardProps {
@@ -1500,6 +1503,30 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         url: "https://drive.google.com/file/d/1_bl-Vz5x5BRd6p-ChraWzrCUd7Q_Iilf/preview",
         icon: <Newspaper className="w-8 h-8" />,
         color: "from-blue-500 to-blue-600"
+      },
+      { 
+        id: 7, 
+        title: "Mapa do Campori", 
+        description: "Localização e áreas",
+        url: "https://drive.google.com/file/d/1NgNz1HCCUqrFbyUuzaKkkhDoiN-uvJOg/preview",
+        icon: <Map className="w-8 h-8" />,
+        color: "from-teal-500 to-teal-600"
+      },
+      { 
+        id: 8, 
+        title: "Escola Sabatina", 
+        description: "Orientações e programação",
+        url: "https://drive.google.com/file/d/1L-2dgdCpAP0kKKg4ttdVoU0Zn2IfcHxb/preview",
+        icon: <School className="w-8 h-8" />,
+        color: "from-indigo-500 to-indigo-600"
+      },
+      { 
+        id: 9, 
+        title: "Check-in", 
+        description: "Orientações de chegada",
+        url: "https://drive.google.com/file/d/1hcctU63MM8jhVlQ4Pxz_5EraRQ5w1aYk/preview",
+        icon: <ClipboardCheck className="w-8 h-8" />,
+        color: "from-purple-500 to-purple-600"
       },
     ];
 
