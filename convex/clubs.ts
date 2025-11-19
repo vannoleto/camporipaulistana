@@ -606,11 +606,17 @@ export const resetAllClubScores = mutation({
       },
     };
 
-    // Limpar todos os logs de atividade antes de resetar (comentado para evitar erros)
-    // const allActivityLogs = await ctx.db.query("activityLogs").collect();
-    // for (const log of allActivityLogs) {
-    //   await ctx.db.delete(log._id);
-    // }
+    // Limpar todos os logs de atividade antes de resetar
+    const allActivityLogs = await ctx.db.query("activityLogs").collect();
+    for (const log of allActivityLogs) {
+      await ctx.db.delete(log._id);
+    }
+
+    // Limpar todos os critérios travados
+    const allEvaluatedCriteria = await ctx.db.query("evaluatedCriteria").collect();
+    for (const criteria of allEvaluatedCriteria) {
+      await ctx.db.delete(criteria._id);
+    }
 
     for (const club of clubs) {
       const totalScore = calculateTotalScore(maxScores);
@@ -630,11 +636,11 @@ export const resetAllClubScores = mutation({
       userName: "Sistema",
       userRole: "system",
       action: "system_reset",
-      details: `Sistema resetado: ${updatedCount} clubes resetados para pontuação máxima (1910 pts). Históricos anteriores foram limpos.`,
+      details: `Sistema resetado: ${updatedCount} clubes resetados para pontuação máxima (1910 pts). Todo o histórico de avaliações foi limpo.`,
       timestamp: Date.now(),
     });
 
-    return `Reset concluído! ${updatedCount} clubes foram resetados para pontuação máxima (1910 pontos). Históricos limpos.`;
+    return `Reset concluído! ${updatedCount} clubes foram resetados para pontuação máxima (1910 pontos). Todo o histórico de avaliações foi limpo.`;
   },
 });
 

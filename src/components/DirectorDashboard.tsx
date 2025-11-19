@@ -1045,49 +1045,57 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
           </div>
         </div>
 
+        {/* Renderizar TODAS as categorias dinamicamente */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {renderScoringSection(
-            <span className="flex items-center gap-2">
-              <ClipboardList size={20} />
-              Pré-requisitos
-            </span>, 
-            "prerequisites", scoringCriteria.prerequisites, currentScores.prerequisites
-          )}
-          {renderScoringSection(
-            <span className="flex items-center gap-2">
-              <Users size={20} />
-              Participação
-            </span>, 
-            "participation", (scoringCriteria as any).participation, currentScores.participation
-          )}
-          {(currentScores as any)?.secretary && renderScoringSection(
-            <span className="flex items-center gap-2">
-              <Target size={20} />
-              Secretário
-            </span>, 
-            "secretary", (scoringCriteria as any).secretary, (currentScores as any).secretary
-          )}
-          {renderScoringSection(
-            <span className="flex items-center gap-2">
-              <Star size={20} />
-              Eventos
-            </span>, 
-            "events", (scoringCriteria as any).events, currentScores.events
-          )}
-          {renderScoringSection(
-            <span className="flex items-center gap-2">
-              <Trophy size={20} />
-              Bônus
-            </span>, 
-            "bonus", (scoringCriteria as any).bonus, currentScores.bonus
-          )}
-          {renderScoringSection(
-            <span className="flex items-center gap-2">
-              <X size={20} />
-              Deméritos
-            </span>, 
-            "demerits", (scoringCriteria as any).demerits, currentScores.demerits, true
-          )}
+          {scoringCriteria && Object.keys(scoringCriteria).map((category) => {
+            const categoryData = scoringCriteria[category];
+            const categoryScores = currentScores[category] || {};
+            
+            // Verificar se a categoria tem dados válidos
+            if (!categoryData || typeof categoryData !== 'object' || Object.keys(categoryData).length === 0) {
+              return null;
+            }
+
+            // Mapear nomes e ícones das categorias
+            const categoryNames: Record<string, string> = {
+              prerequisites: 'Pré-requisitos',
+              campground: 'Área de Acampamento',
+              kitchen: 'Cozinha',
+              participation: 'Participação',
+              uniform: 'Uniforme',
+              secretary: 'Secretaria',
+              events: 'Eventos/Provas',
+              bonus: 'Bônus',
+              demerits: 'Deméritos'
+            };
+
+            const categoryIcons: Record<string, JSX.Element> = {
+              prerequisites: <ClipboardList size={20} />,
+              campground: <Home size={20} />,
+              kitchen: <ChefHat size={20} />,
+              participation: <Users size={20} />,
+              uniform: <Shirt size={20} />,
+              secretary: <FileText size={20} />,
+              events: <Star size={20} />,
+              bonus: <Trophy size={20} />,
+              demerits: <X size={20} />
+            };
+
+            const categoryName = categoryNames[category] || category;
+            const categoryIcon = categoryIcons[category] || <Target size={20} />;
+            const isDemerits = category === 'demerits';
+
+            return renderScoringSection(
+              <span className="flex items-center gap-2">
+                {categoryIcon}
+                {categoryName}
+              </span>,
+              category,
+              categoryData,
+              categoryScores,
+              isDemerits
+            );
+          })}
         </div>
       </div>
     );
@@ -1348,6 +1356,19 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
             </div>
           </div>
         )}
+
+        {/* Aviso sobre persistência do histórico */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+            <Shield size={18} />
+            Sobre o Histórico de Avaliações
+          </h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Todas as avaliações realizadas pelo staff aparecem aqui em tempo real</li>
+            <li>• O histórico é permanente e não pode ser alterado pelos diretores</li>
+            <li>• Mostra quem avaliou, quando, qual critério e a pontuação obtida</li>
+          </ul>
+        </div>
 
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {!activityLogs ? (
