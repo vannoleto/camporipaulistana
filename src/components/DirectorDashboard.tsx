@@ -230,6 +230,7 @@ function QRCodeDisplay({ club }: { club: any }) {
 export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab }: DirectorDashboardProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("home");
   const [selectedBulletin, setSelectedBulletin] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Usar activeTab interno para controle local
   const activeTab = internalActiveTab;
@@ -1102,9 +1103,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
   };
 
   const renderHistory = () => {
-    // Função para atualizar dados
+    // Função para atualizar dados (simula refresh pois Convex já atualiza automaticamente)
     const handleRefresh = () => {
-      window.location.reload();
+      setIsRefreshing(true);
+      // O Convex já atualiza automaticamente via useQuery
+      // Apenas mostrar feedback visual ao usuário
+      setTimeout(() => {
+        setIsRefreshing(false);
+        toast.success("Histórico atualizado!");
+      }, 500);
     };
 
     // Função para formatar data e hora
@@ -1340,10 +1347,11 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
           </div>
           <button
             onClick={handleRefresh}
-            className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            disabled={isRefreshing}
+            className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw size={16} />
-            <span>Atualizar</span>
+            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+            <span>{isRefreshing ? 'Atualizando...' : 'Atualizar'}</span>
           </button>
         </div>
 
