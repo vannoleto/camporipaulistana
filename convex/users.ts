@@ -101,9 +101,10 @@ export const registerUser = mutation({
   args: {
     name: v.string(),
     password: v.string(),
-    role: v.union(v.literal("regional"), v.literal("director"), v.literal("secretary"), v.literal("staff")),
+    role: v.union(v.literal("mda"), v.literal("regional"), v.literal("director"), v.literal("secretary"), v.literal("staff")),
     region: v.optional(v.string()),
     clubId: v.optional(v.id("clubs")),
+    mdaPosition: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Verificar se usuário já existe
@@ -119,6 +120,11 @@ export const registerUser = mutation({
     // Validar campos obrigatórios baseados no role
     if ((args.role === "regional" || args.role === "director" || args.role === "secretary") && !args.region) {
       throw new Error("Região é obrigatória para este tipo de usuário");
+    }
+
+    // Validar mdaPosition para usuários MDA
+    if (args.role === "mda" && !args.mdaPosition) {
+      throw new Error("Cargo é obrigatório para usuários MDA");
     }
 
     // Validar clube para diretores e secretários
@@ -144,6 +150,7 @@ export const registerUser = mutation({
       region: args.region,
       clubId: args.clubId,
       password: args.password,
+      mdaPosition: args.mdaPosition,
       isActive: true,
       isApproved: false, // Precisa aprovação do admin
       createdAt: Date.now(),

@@ -25,6 +25,7 @@ const applicationTables = {
     name: v.string(),
     role: v.union(
       v.literal("admin"), 
+      v.literal("mda"),
       v.literal("staff"), 
       v.literal("regional"), 
       v.literal("director"), 
@@ -33,6 +34,7 @@ const applicationTables = {
     region: v.optional(v.string()),
     clubId: v.optional(v.id("clubs")),
     password: v.optional(v.string()),
+    mdaPosition: v.optional(v.string()), // Departamental, Secretária MDA, Coordenador
     isActive: v.boolean(),
     isFirstLogin: v.optional(v.boolean()),
     isApproved: v.optional(v.boolean()),

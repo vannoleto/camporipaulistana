@@ -61,6 +61,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
     region: "",
     clubName: "",
     role: "",
+    mdaPosition: "", // Para armazenar: Departamental, Secretária MDA ou Coordenador
   });
 
   const loginUser = useMutation(api.users.loginUser);
@@ -74,6 +75,13 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
       description: "Acesso completo ao sistema",
       icon: <Crown size={32} />,
       color: "bg-red-500",
+    },
+    {
+      id: "mda",
+      title: "MDA/Coordenador",
+      description: "Visualizar todos os clubes",
+      icon: <UserCheck size={32} />,
+      color: "bg-orange-500",
     },
     {
       id: "regional",
@@ -105,6 +113,9 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
     if (profileId === "admin") {
       setShowLoginForm(true);
       setFormData({ ...formData, role: "admin" });
+    } else if (profileId === "mda") {
+      setShowLoginForm(true);
+      setFormData({ ...formData, role: "" }); // Será preenchido no select
     } else {
       setShowLoginForm(true);
       setFormData({ ...formData, role: profileId === "director" ? "director" : profileId });
@@ -159,13 +170,14 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
         role: formData.role as any,
         region: formData.region || undefined,
         clubId: clubId,
+        mdaPosition: formData.mdaPosition || undefined,
       });
       
       toast.success("Cadastro realizado! Aguarde aprovação do administrador.");
       setShowRegisterForm(false);
       setShowLoginForm(false);
       setSelectedProfile("");
-      setFormData({ name: "", password: "", region: "", clubName: "", role: "" });
+      setFormData({ name: "", password: "", region: "", clubName: "", role: "", mdaPosition: "" });
     } catch (error: any) {
       toast.error(error.message || "Erro ao cadastrar");
     }
@@ -175,7 +187,7 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
     setShowLoginForm(false);
     setShowRegisterForm(false);
     setSelectedProfile("");
-    setFormData({ name: "", password: "", region: "", clubName: "", role: "" });
+    setFormData({ name: "", password: "", region: "", clubName: "", role: "", mdaPosition: "" });
   };
 
   const renderAdminLogin = () => (
@@ -365,6 +377,26 @@ export function ProfileSelection({ onLogin }: ProfileSelectionProps) {
                   {region}
                 </option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {selectedProfile === "mda" && (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <UserCheck size={16} className="text-green-500" />
+              Cargo
+            </label>
+            <select
+              value={formData.mdaPosition}
+              onChange={(e) => setFormData({ ...formData, mdaPosition: e.target.value, role: "mda" })}
+              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-all duration-200 bg-gray-50 focus:bg-white text-lg"
+              required
+            >
+              <option value="">Selecione seu cargo</option>
+              <option value="Departamental">Departamental</option>
+              <option value="Secretária MDA">Secretária MDA</option>
+              <option value="Coordenador">Coordenador</option>
             </select>
           </div>
         )}

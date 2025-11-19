@@ -4,6 +4,7 @@ import { ProfileSelection } from "./components/ProfileSelection";
 import AdminDashboard from "./components/AdminDashboard";
 import { DirectorDashboard } from "./components/DirectorDashboard";
 import { RegionalDashboard } from "./components/RegionalDashboard";
+import { MDADashboard } from "./components/MDADashboard";
 import { StaffDashboard } from "./components/StaffDashboard";
 import { MobileLayout } from "./components/MobileLayout";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
@@ -33,6 +34,8 @@ function App() {
     switch (user.role) {
       case "admin":
         return <AdminDashboard user={user} onLogout={handleLogout} />;
+      case "mda":
+        return <MDADashboard user={user} onLogout={handleLogout} />;
       case "director":
       case "secretary":
         return <DirectorDashboard user={user} onLogout={handleLogout} />;
