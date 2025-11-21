@@ -206,7 +206,7 @@ export const listClubs = query({
       clubs = clubs.filter(club => club.classification === args.classification);
     }
     
-    return clubs.sort((a, b) => b.totalScore - a.totalScore);
+    return clubs.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   },
 });
 
