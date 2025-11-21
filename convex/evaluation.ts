@@ -243,14 +243,19 @@ export const batchEvaluateClubs = mutation({
       throw new Error("Apenas administradores podem fazer avaliação em lote");
     }
 
-    // Determinar pontuação baseada no tipo
+    // Determinar pontuação baseada no tipo (SISTEMA DE PENALIDADE)
+    // Clubes começam com pontuação máxima e PERDEM pontos por não atender critérios
     let scoreValue = 0;
     if (args.scoreType === "maximum") {
-      scoreValue = args.maxScore;
+      // Atendeu 100% = NÃO PERDE NADA = 0 de penalidade
+      scoreValue = 0;
     } else if (args.scoreType === "partial") {
-      scoreValue = args.partialScore;
+      // Atendeu parcialmente = PERDE a diferença entre max e parcial
+      scoreValue = -(args.maxScore - args.partialScore);
+    } else {
+      // Não atendeu = PERDE TUDO = penalidade total
+      scoreValue = -args.maxScore;
     }
-    // zero já é 0
 
     const results = [];
     
@@ -308,12 +313,16 @@ export const batchEvaluateClubs = mutation({
           userRole: "admin",
           action: "BATCH_EVALUATE",
           timestamp: Date.now(),
-          details: args.notes || `Avaliação em lote - ${args.scoreType === 'maximum' ? 'Pontuação Máxima' : args.scoreType === 'partial' ? 'Pontuação Parcial' : 'Sem Pontuação'}`,
+          details: args.notes || `Avaliação em lote - ${
+            args.scoreType === 'maximum' ? '100% Completo (sem penalidade)' : 
+            args.scoreType === 'partial' ? `Parcial (penalidade: ${Math.abs(scoreValue)} pts)` : 
+            `Não atendeu (penalidade: ${Math.abs(scoreValue)} pts)`
+          }`,
           scoreChange: {
             category: args.category,
             subcategory: args.criteriaKey,
-            oldValue: 0,
-            newValue: scoreValue,
+            oldValue: club.totalScore,
+            newValue: club.totalScore + scoreValue,
             difference: scoreValue,
           },
         });

@@ -1793,6 +1793,21 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <p className="text-sm opacity-90">Avalie múltiplos clubes de uma só vez</p>
             </div>
 
+            {/* Aviso sobre Sistema de Penalidades */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-yellow-800 mb-1">Sistema de Penalidades</h4>
+                  <p className="text-sm text-yellow-700">
+                    Todos os clubes iniciam com <strong>1910 pontos</strong>. 
+                    A cada critério NÃO atendido ou atendido parcialmente, o clube <strong>PERDE pontos</strong>.
+                    Avalie com atenção para aplicar a penalidade correta!
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Seleção de Categoria e Critério */}
             <div className="space-y-4">
               <div>
@@ -1927,7 +1942,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                           
                           return (
                             <>
-                              <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 transition-colors">
+                              <label className="flex items-center gap-3 p-4 border-2 border-green-300 rounded-lg cursor-pointer hover:bg-green-50 transition-colors has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
                                 <input
                                   type="radio"
                                   name="scoreType"
@@ -1937,13 +1952,13 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                                   className="w-5 h-5 text-green-600"
                                 />
                                 <div className="flex-1">
-                                  <p className="font-medium text-gray-900">Pontuação Máxima</p>
-                                  <p className="text-sm text-green-600">+{criterion?.max || 0} pontos</p>
+                                  <p className="font-medium text-gray-900">✅ Atendeu 100% (Completo)</p>
+                                  <p className="text-sm text-green-600">Não perde pontos - Pontuação máxima mantida</p>
                                 </div>
                               </label>
 
                               {criterion?.partial && criterion.partial > 0 && (
-                                <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-yellow-50 transition-colors">
+                                <label className="flex items-center gap-3 p-4 border-2 border-yellow-300 rounded-lg cursor-pointer hover:bg-yellow-50 transition-colors has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50">
                                   <input
                                     type="radio"
                                     name="scoreType"
@@ -1953,24 +1968,24 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                                     className="w-5 h-5 text-yellow-600"
                                   />
                                   <div className="flex-1">
-                                    <p className="font-medium text-gray-900">Pontuação Parcial</p>
-                                    <p className="text-sm text-yellow-600">+{criterion?.partial || 0} pontos</p>
+                                    <p className="font-medium text-gray-900">⚠️ Atendeu Parcialmente</p>
+                                    <p className="text-sm text-yellow-600">Perde {(criterion?.max || 0) - (criterion?.partial || 0)} pontos (de {criterion?.max} para {criterion?.partial})</p>
                                   </div>
                                 </label>
                               )}
 
-                              <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                              <label className="flex items-center gap-3 p-4 border-2 border-red-300 rounded-lg cursor-pointer hover:bg-red-50 transition-colors has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                                 <input
                                   type="radio"
                                   name="scoreType"
                                   value="zero"
                                   checked={batchScoreType === 'zero'}
                                   onChange={(e) => setBatchScoreType(e.target.value as any)}
-                                  className="w-5 h-5 text-gray-600"
+                                  className="w-5 h-5 text-red-600"
                                 />
                                 <div className="flex-1">
-                                  <p className="font-medium text-gray-900">Sem Pontuação</p>
-                                  <p className="text-sm text-gray-600">0 pontos</p>
+                                  <p className="font-medium text-gray-900">❌ Não Atendeu</p>
+                                  <p className="text-sm text-red-600">Perde {criterion?.max || 0} pontos (penalidade total)</p>
                                 </div>
                               </label>
                             </>
