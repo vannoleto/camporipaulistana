@@ -1070,7 +1070,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               demerits: 'Deméritos'
             };
 
-            const categoryIcons: Record<string, JSX.Element> = {
+            const categoryIcons: Record<string, React.ReactElement> = {
               prerequisites: <ClipboardList size={20} />,
               campground: <Home size={20} />,
               kitchen: <ChefHat size={20} />,

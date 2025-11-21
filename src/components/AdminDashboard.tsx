@@ -36,7 +36,13 @@ import {
   TrendingUp,
   User,
   Shield,
-  ChefHat
+  ChefHat,
+  Zap,
+  ListChecks,
+  Filter,
+  CheckSquare,
+  BarChart2,
+  FileCheck
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -85,6 +91,14 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       partial: 0
     });
 
+    // Estados para Avaliação em Lote
+    const [evaluationMode, setEvaluationMode] = useState<'individual' | 'batch'>('individual');
+    const [batchCategory, setBatchCategory] = useState<string>('');
+    const [batchCriterion, setBatchCriterion] = useState<string>('');
+    const [selectedClubsForBatch, setSelectedClubsForBatch] = useState<string[]>([]);
+    const [batchScoreType, setBatchScoreType] = useState<'maximum' | 'partial' | 'zero'>('maximum');
+    const [batchNotes, setBatchNotes] = useState<string>('');
+
     console.log("AdminDashboard: About to call basic queries");
 
     // Começar só com queries essenciais
@@ -125,6 +139,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     // Query para ranking
     const allClubsForRanking = useQuery(api.clubs.getRanking, {});
 
+    // Query para clubes não avaliados (avaliação em lote)
+    const unevaluatedClubs = useQuery(
+      api.evaluation.getUnevaluatedClubs,
+      batchCategory && batchCriterion ? {
+        category: batchCategory,
+        criteriaKey: batchCriterion,
+      } : "skip"
+    );
+
     // Mutations - DEVEM vir antes de qualquer return condicional
     const approveUser = useMutation(api.users.approveUser);
     const updateUser = useMutation(api.users.updateUser);
@@ -140,6 +163,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const validateAllClassifications = useMutation(api.classification.validateAllClassifications);
     const fixInitialClassifications = useMutation(api.classification.fixInitialClassifications);
     const updateClubScores = useMutation(api.clubs.updateClubScores);
+    const batchEvaluateClubs = useMutation(api.evaluation.batchEvaluateClubs);
     const lockCriteria = useMutation(api.evaluation.lockCriteria);
     const unlockCriteria = useMutation(api.evaluation.unlockCriteria);
     const clearAllCriteriaLocks = useMutation(api.evaluation.clearAllCriteriaLocks);
@@ -754,7 +778,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     
     try {
       await updateScoringCriterion({
-        criteria: editingCriteria,
+        category: editingCriteria.category,
+        key: editingCriteria.key,
+        description: editingCriteria.description,
+        max: editingCriteria.max,
+        partial: editingCriteria.partial,
         adminId: user._id,
       });
       toast.success("Critérios atualizados com sucesso!");
@@ -781,6 +809,89 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     } catch (error: any) {
       toast.error(error.message);
     }
+  };
+
+  // Handler para avaliação em lote
+  const handleBatchEvaluation = async () => {
+    if (selectedClubsForBatch.length === 0) {
+      toast.error("Selecione pelo menos um clube para avaliar");
+      return;
+    }
+
+    if (!batchCategory || !batchCriterion) {
+      toast.error("Selecione uma categoria e critério");
+      return;
+    }
+
+    if (!scoringCriteria) {
+      toast.error("Critérios de pontuação não carregados");
+      return;
+    }
+
+    try {
+      // Buscar critério para obter pontuações
+      const categoryData = scoringCriteria[batchCategory];
+      if (!categoryData) {
+        toast.error("Categoria não encontrada");
+        return;
+      }
+
+      const criterion = categoryData[batchCriterion];
+      if (!criterion) {
+        toast.error("Critério não encontrado");
+        return;
+      }
+
+      const maxScore = criterion.max || 0;
+      const partialScore = criterion.partial || 0;
+
+      // Executar avaliação em lote
+      const result = await batchEvaluateClubs({
+        clubIds: selectedClubsForBatch as any,
+        category: batchCategory,
+        criteriaKey: batchCriterion,
+        scoreType: batchScoreType,
+        maxScore,
+        partialScore,
+        evaluatorId: user._id,
+        notes: batchNotes || undefined,
+      });
+
+      if (result.successful > 0) {
+        toast.success(`${result.successful} clube(s) avaliado(s) com sucesso!`);
+      }
+      
+      if (result.failed > 0) {
+        toast.warning(`${result.failed} clube(s) não puderam ser avaliados`);
+      }
+
+      // Limpar seleções
+      setSelectedClubsForBatch([]);
+      setBatchNotes('');
+      setBatchCategory('');
+      setBatchCriterion('');
+      
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao avaliar clubes");
+    }
+  };
+
+  const toggleClubSelection = (clubId: string) => {
+    setSelectedClubsForBatch(prev => 
+      prev.includes(clubId) 
+        ? prev.filter(id => id !== clubId)
+        : [...prev, clubId]
+    );
+  };
+
+  const selectAllUnevaluatedClubs = () => {
+    if (unevaluatedClubs) {
+      setSelectedClubsForBatch(unevaluatedClubs.map(c => c._id));
+    }
+  };
+
+  const clearClubSelection = () => {
+    setSelectedClubsForBatch([]);
   };
 
   const handleReclassifyAllClubs = async () => {
@@ -1647,17 +1758,268 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       />
     ) : (
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-          <div className="flex items-center">
-            <Info size={20} className="text-blue-600 mr-2" />
-            <div className="text-blue-800">
-              <p className="font-medium">Sistema de Avaliação - Admin</p>
-              <p className="text-sm">
-                Selecione um clube para iniciar ou continuar sua avaliação. Como administrador, você pode avaliar todos os clubes.
-              </p>
-            </div>
-          </div>
+        {/* Toggle entre modos */}
+        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setEvaluationMode('individual')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+              evaluationMode === 'individual'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Modo Individual
+          </button>
+          <button
+            onClick={() => setEvaluationMode('batch')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+              evaluationMode === 'batch'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Modo em Lote
+          </button>
         </div>
+
+        {evaluationMode === 'batch' ? (
+          // Modo de Avaliação em Lote
+          <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-6 h-6" />
+                <h3 className="text-xl font-bold">Avaliação em Lote</h3>
+              </div>
+              <p className="text-sm opacity-90">Avalie múltiplos clubes de uma só vez</p>
+            </div>
+
+            {/* Seleção de Categoria e Critério */}
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <Filter className="w-4 h-4" />
+                  Selecione a Categoria
+                </label>
+                <select
+                  value={batchCategory}
+                  onChange={(e) => {
+                    setBatchCategory(e.target.value);
+                    setBatchCriterion('');
+                    setSelectedClubsForBatch([]);
+                  }}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Selecione uma categoria...</option>
+                  {scoringCriteria && Object.keys(scoringCriteria).map((categoryKey) => (
+                    <option key={categoryKey} value={categoryKey}>
+                      {categoryKey === 'prerequisites' ? 'Pré-Requisitos' :
+                       categoryKey === 'campground' ? 'Acampamento' :
+                       categoryKey === 'kitchen' ? 'Cozinha' :
+                       categoryKey === 'participation' ? 'Participação' :
+                       categoryKey === 'uniform' ? 'Uniforme' :
+                       categoryKey === 'secretary' ? 'Secretaria' :
+                       categoryKey === 'events' ? 'Eventos' :
+                       categoryKey === 'bonus' ? 'Bônus' :
+                       categoryKey === 'demerits' ? 'Deméritos' : categoryKey}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {batchCategory && (
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <ListChecks className="w-4 h-4" />
+                    Selecione o Critério
+                  </label>
+                  <select
+                    value={batchCriterion}
+                    onChange={(e) => {
+                      setBatchCriterion(e.target.value);
+                      setSelectedClubsForBatch([]);
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Selecione um critério...</option>
+                    {scoringCriteria && batchCategory && scoringCriteria[batchCategory] && 
+                      Object.entries(scoringCriteria[batchCategory]).map(([key, criterion]: [string, any]) => (
+                        <option key={key} value={key}>
+                          {criterion.description} (Max: {criterion.max} pts{criterion.partial ? `, Parcial: ${criterion.partial} pts` : ''})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Lista de Clubes Pendentes */}
+            {batchCategory && batchCriterion && (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <CheckSquare className="w-4 h-4" />
+                      Clubes Pendentes ({unevaluatedClubs?.length || 0})
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAllUnevaluatedClubs}
+                        className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                      >
+                        Selecionar Todos
+                      </button>
+                      <button
+                        onClick={clearClubSelection}
+                        className="text-xs px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </div>
+
+                  {unevaluatedClubs && unevaluatedClubs.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto border-2 border-gray-200 rounded-lg p-2 space-y-2">
+                      {unevaluatedClubs.map((club) => (
+                        <label
+                          key={club._id}
+                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                            selectedClubsForBatch.includes(club._id)
+                              ? 'bg-blue-50 border-2 border-blue-500'
+                              : 'bg-white border-2 border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedClubsForBatch.includes(club._id)}
+                            onChange={() => toggleClubSelection(club._id)}
+                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{club.name}</p>
+                            <p className="text-sm text-gray-500">{club.region}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-green-50 border-2 border-green-200 rounded-lg">
+                      <CheckCircle size={48} className="mx-auto text-green-600 mb-2" />
+                      <p className="text-green-800 font-medium">
+                        Todos os clubes já foram avaliados neste critério!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedClubsForBatch.length > 0 && (
+                  <>
+                    {/* Tipo de Pontuação */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                        <BarChart2 className="w-4 h-4" />
+                        Tipo de Pontuação
+                      </label>
+                      <div className="space-y-2">
+                        {(() => {
+                          const criterion = scoringCriteria && batchCategory && batchCriterion 
+                            ? scoringCriteria[batchCategory]?.[batchCriterion]
+                            : null;
+                          
+                          return (
+                            <>
+                              <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 transition-colors">
+                                <input
+                                  type="radio"
+                                  name="scoreType"
+                                  value="maximum"
+                                  checked={batchScoreType === 'maximum'}
+                                  onChange={(e) => setBatchScoreType(e.target.value as any)}
+                                  className="w-5 h-5 text-green-600"
+                                />
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">Pontuação Máxima</p>
+                                  <p className="text-sm text-green-600">+{criterion?.max || 0} pontos</p>
+                                </div>
+                              </label>
+
+                              {criterion?.partial && criterion.partial > 0 && (
+                                <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-yellow-50 transition-colors">
+                                  <input
+                                    type="radio"
+                                    name="scoreType"
+                                    value="partial"
+                                    checked={batchScoreType === 'partial'}
+                                    onChange={(e) => setBatchScoreType(e.target.value as any)}
+                                    className="w-5 h-5 text-yellow-600"
+                                  />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900">Pontuação Parcial</p>
+                                    <p className="text-sm text-yellow-600">+{criterion?.partial || 0} pontos</p>
+                                  </div>
+                                </label>
+                              )}
+
+                              <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input
+                                  type="radio"
+                                  name="scoreType"
+                                  value="zero"
+                                  checked={batchScoreType === 'zero'}
+                                  onChange={(e) => setBatchScoreType(e.target.value as any)}
+                                  className="w-5 h-5 text-gray-600"
+                                />
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">Sem Pontuação</p>
+                                  <p className="text-sm text-gray-600">0 pontos</p>
+                                </div>
+                              </label>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <FileCheck className="w-4 h-4" />
+                        Observações (opcional)
+                      </label>
+                      <textarea
+                        value={batchNotes}
+                        onChange={(e) => setBatchNotes(e.target.value)}
+                        placeholder="Adicione observações sobre esta avaliação..."
+                        rows={3}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Botão de Avaliação */}
+                    <button
+                      onClick={handleBatchEvaluation}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-lg font-bold text-lg shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all transform hover:scale-[1.02]"
+                    >
+                      Avaliar {selectedClubsForBatch.length} Clube(s) Selecionado(s)
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          // Modo Individual (mantém a interface atual)
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-center">
+                <Info size={20} className="text-blue-600 mr-2" />
+                <div className="text-blue-800">
+                  <p className="font-medium">Sistema de Avaliação - Admin</p>
+                  <p className="text-sm">
+                    Selecione um clube para iniciar ou continuar sua avaliação. Como administrador, você pode avaliar todos os clubes.
+                  </p>
+                </div>
+              </div>
+            </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
@@ -1740,6 +2102,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             </div>
           ))}
         </div>
+          </div>
+        )}
       </div>
     );
   };
