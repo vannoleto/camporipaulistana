@@ -31,6 +31,7 @@ import {
   Info,
   History,
   RotateCcw,
+  RefreshCw,
   MapPin,
   Award,
   TrendingUp,
@@ -59,6 +60,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const [activeTab, setActiveTab] = useState("overview");
     const [editingCriteria, setEditingCriteria] = useState<any>(null);
     const [clubSearch, setClubSearch] = useState("");
+    const [userSearch, setUserSearch] = useState("");
     const [selectedClub, setSelectedClub] = useState<any>(null);
     const [editingScores, setEditingScores] = useState<any>(null);
     const [selectedRegion, setSelectedRegion] = useState<string>("all");
@@ -168,6 +170,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const unlockCriteria = useMutation(api.evaluation.unlockCriteria);
     const clearAllCriteriaLocks = useMutation(api.evaluation.clearAllCriteriaLocks);
     const clearAllActivityLogs = useMutation(api.clubs.clearAllActivityLogs);
+    const migrateOldBatchEvaluations = useMutation(api.evaluation.migrateOldBatchEvaluations);
     const importClubsBatch = useMutation(api.clubs.importClubsBatch);
     const deleteClub = useMutation(api.clubs.deleteClub);
     const createClub = useMutation(api.clubs.createClub);
@@ -2946,95 +2949,141 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     </div>
   );
 
-  const renderUsers = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Usuários do Sistema</h2>
+  const renderUsers = () => {
+    // Filtrar usuários baseado na busca
+    const filteredUsers = users?.filter(u => {
+      if (u.role === "admin") return false; // Não mostrar admin
+      if (!userSearch) return true;
+      
+      const searchLower = userSearch.toLowerCase();
+      const nameMatch = u.name.toLowerCase().includes(searchLower);
+      const roleMatch = u.role.toLowerCase().includes(searchLower);
+      const regionMatch = u.region?.toLowerCase().includes(searchLower);
+      
+      return nameMatch || roleMatch || regionMatch;
+    });
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Nome
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Função
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Região/Clube
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {users?.filter(u => u.role !== "admin").map((userItem) => (
-                <tr key={userItem._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{userItem.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="capitalize">{userItem.role}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {userItem.role === "director" || userItem.role === "secretary" ? (
-                      <div>
-                        <div className="font-medium">{(userItem as any).club?.name || "Clube não definido"}</div>
-                        <div className="text-sm text-gray-500">{userItem.region || "-"}</div>
-                      </div>
-                    ) : (
-                      userItem.region || "-"
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        userItem.isActive 
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}>
-                        {userItem.isActive ? "Ativo" : "Inativo"}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        userItem.isApproved 
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}>
-                        {userItem.isApproved ? "Aprovado" : "Pendente"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex space-x-2">
-                      {!userItem.isApproved && (
-                        <button
-                          onClick={() => handleApproveUser(userItem._id, true)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200"
-                        >
-                          <Check size={16} />
-                          Aprovar
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deleteUser({ userId: userItem._id, adminId: user._id })}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200"
-                      >
-                        <Trash2 size={16} />
-                        Excluir
-                      </button>
-                    </div>
-                  </td>
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl font-bold">Usuários do Sistema</h2>
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Buscar por nome, função ou região..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-gray-400" />
+            </div>
+          </div>
+        </div>
+
+        {userSearch && (
+          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              Mostrando {filteredUsers?.length || 0} de {users?.filter(u => u.role !== "admin").length || 0} usuários
+              {userSearch && ` para "${userSearch}"`}
+            </p>
+          </div>
+        )}
+
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Função
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Região/Clube
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Ações
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredUsers?.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      {userSearch ? "Nenhum usuário encontrado para a busca" : "Nenhum usuário cadastrado"}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers?.map((userItem) => (
+                    <tr key={userItem._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap font-medium">{userItem.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="capitalize">{userItem.role}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userItem.role === "director" || userItem.role === "secretary" ? (
+                          <div>
+                            <div className="font-medium">{(userItem as any).club?.name || "Clube não definido"}</div>
+                            <div className="text-sm text-gray-500">{userItem.region || "-"}</div>
+                          </div>
+                        ) : (
+                          userItem.region || "-"
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex space-x-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            userItem.isActive 
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                            {userItem.isActive ? "Ativo" : "Inativo"}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            userItem.isApproved 
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                            {userItem.isApproved ? "Aprovado" : "Pendente"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex space-x-2">
+                          {!userItem.isApproved && (
+                            <button
+                              onClick={() => handleApproveUser(userItem._id, true)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200"
+                            >
+                              <Check size={16} />
+                              Aprovar
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteUser({ userId: userItem._id, adminId: user._id })}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200"
+                          >
+                            <Trash2 size={16} />
+                            Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderPending = () => (
     <div className="space-y-6">
@@ -3756,9 +3805,9 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           </div>
 
           <div className="border border-green-200 p-4 rounded-lg">
-            <h4 className="font-semibold text-green-700 mb-2">Inicialização</h4>
+            <h4 className="font-semibold text-green-700 mb-2">Inicialização e Correções</h4>
             <p className="text-sm text-gray-600 mb-3">
-              Ferramentas para resetar pontuação dos clubes para o valor máximo (1910 pontos).
+              Ferramentas para resetar pontuação dos clubes e corrigir dados inconsistentes de avaliações antigas.
             </p>
             <div className="space-y-2">
               <button
@@ -3773,6 +3822,22 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 className="w-full bg-emerald-500 text-white px-4 py-2 rounded hover:bg-emerald-600 text-sm"
               >
                 Corrigir Classificações Iniciais
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('Isso vai corrigir os clubes que foram avaliados em lote antes da atualização e estão mostrando 0 pontos. Continuar?')) return;
+                  try {
+                    toast.info('Migrando dados antigos...');
+                    const result = await migrateOldBatchEvaluations({});
+                    toast.success(`Migração concluída! ${result.clubsMigrated} clubes corrigidos de ${result.totalClubsChecked} verificados.`);
+                  } catch (error: any) {
+                    toast.error(`Erro na migração: ${error.message}`);
+                  }
+                }}
+                className="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={16} />
+                Corrigir Avaliações Antigas
               </button>
               <button
                 onClick={handleImportClubs}

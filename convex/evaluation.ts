@@ -388,3 +388,119 @@ export const batchEvaluateClubs = mutation({
     };
   },
 });
+
+// Migração de dados: corrigir avaliações em lote antigas que não têm estrutura scores
+export const migrateOldBatchEvaluations = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const clubs = await ctx.db.query("clubs").collect();
+    
+    // Buscar critérios de pontuação do systemConfig
+    const scoringConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "scoring_criteria"))
+      .first();
+    
+    if (!scoringConfig) {
+      throw new Error("Critérios de pontuação não encontrados no sistema");
+    }
+
+    let scoringCriteria;
+    try {
+      scoringCriteria = JSON.parse(scoringConfig.value as string);
+    } catch (e) {
+      throw new Error("Erro ao parsear critérios de pontuação");
+    }
+
+    let migratedCount = 0;
+    const results = [];
+
+    for (const club of clubs) {
+      // Verificar se o clube tem avaliações travadas (evaluatedCriteria) mas scores incompletos
+      const evaluations = await ctx.db
+        .query("evaluatedCriteria")
+        .withIndex("by_club_and_criteria", (q) => q.eq("clubId", club._id))
+        .collect();
+
+      if (evaluations.length === 0) {
+        continue; // Clube sem avaliações, pular
+      }
+
+      // Verificar se scores está vazio ou indefinido
+      const currentScores = club.scores || {};
+      let needsMigration = false;
+
+      // Verificar se alguma avaliação travada não está refletida em scores
+      for (const evaluation of evaluations) {
+        const { category, criteriaKey, subKey, score } = evaluation;
+        
+        if (!currentScores[category]) {
+          needsMigration = true;
+          break;
+        }
+
+        if (subKey) {
+          // Estrutura aninhada (ex: carousel)
+          if (!currentScores[category][criteriaKey] || 
+              typeof currentScores[category][criteriaKey] !== 'object' ||
+              currentScores[category][criteriaKey][subKey] !== score) {
+            needsMigration = true;
+            break;
+          }
+        } else {
+          // Estrutura simples
+          if (currentScores[category][criteriaKey] !== score) {
+            needsMigration = true;
+            break;
+          }
+        }
+      }
+
+      if (!needsMigration) {
+        continue; // Clube já está correto
+      }
+
+      // Reconstruir scores baseado nas avaliações travadas
+      const updatedScores: any = { ...currentScores };
+
+      for (const evaluation of evaluations) {
+        const { category, criteriaKey, subKey, score } = evaluation;
+
+        // Inicializar categoria se não existir
+        if (!updatedScores[category]) {
+          updatedScores[category] = {};
+        }
+
+        if (subKey) {
+          // Estrutura aninhada
+          if (!updatedScores[category][criteriaKey] || typeof updatedScores[category][criteriaKey] !== 'object') {
+            updatedScores[category][criteriaKey] = {};
+          }
+          updatedScores[category][criteriaKey][subKey] = score;
+        } else {
+          // Estrutura simples
+          updatedScores[category][criteriaKey] = score;
+        }
+      }
+
+      // Atualizar o clube
+      await ctx.db.patch(club._id, {
+        scores: updatedScores,
+      });
+
+      migratedCount++;
+      results.push({
+        clubId: club._id,
+        clubName: club.name,
+        evaluationsCount: evaluations.length,
+        success: true,
+      });
+    }
+
+    return {
+      totalClubsChecked: clubs.length,
+      clubsMigrated: migratedCount,
+      details: results,
+    };
+  },
+});
