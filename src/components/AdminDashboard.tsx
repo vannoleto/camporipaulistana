@@ -1279,7 +1279,16 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredClubs?.map((club) => (
+        {filteredClubs?.map((club) => {
+          console.log(`📊 AdminDashboard - Clube: ${club.name}`, {
+            scores: club.scores,
+            hasScores: !!club.scores,
+            scoringCriteria: !!scoringCriteria
+          });
+          const totalScore = calculateTotalScore(club.scores);
+          console.log(`📊 AdminDashboard - Resultado: ${club.name} = ${totalScore} pts`);
+          
+          return (
           <div
             key={club._id}
             className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
@@ -1296,7 +1305,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Pontuação:</span>
                 <span className="font-medium text-blue-600">
-                  {club.totalScore ? club.totalScore.toLocaleString() : '0'} pts
+                  {totalScore.toLocaleString()} pts
                 </span>
               </div>
               
@@ -1335,7 +1344,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredClubs?.length === 0 && (

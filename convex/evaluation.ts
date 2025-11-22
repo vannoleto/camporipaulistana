@@ -304,6 +304,48 @@ export const batchEvaluateClubs = mutation({
           isLocked: true,
         });
 
+        // Atualizar scores do clube na estrutura detalhada
+        const currentScores = club.scores || {};
+        const updatedScores = { ...currentScores };
+        
+        // Garantir que a categoria existe
+        if (!updatedScores[args.category]) {
+          updatedScores[args.category] = {};
+        }
+        
+        // Determinar o valor da pontuação para a estrutura scores
+        // SISTEMA CORRETO: Mostrar quantos pontos o clube GANHOU, não a penalidade
+        let displayScore = 0;
+        if (args.scoreType === "maximum") {
+          // Atendeu 100% = Ganhou pontuação máxima
+          displayScore = args.maxScore;
+        } else if (args.scoreType === "partial") {
+          // Atendeu parcialmente = Ganhou pontuação parcial
+          displayScore = args.partialScore;
+        } else {
+          // Não atendeu = Ganhou 0 pontos
+          displayScore = 0;
+        }
+        
+        // Se há subKey, atualizar dentro do objeto aninhado
+        if (args.subKey) {
+          if (!updatedScores[args.category][args.criteriaKey]) {
+            updatedScores[args.category][args.criteriaKey] = {};
+          }
+          updatedScores[args.category][args.criteriaKey][args.subKey] = displayScore;
+        } else {
+          // Atualizar diretamente no criteriaKey
+          updatedScores[args.category][args.criteriaKey] = displayScore;
+        }
+
+        // Obter o valor antigo para o log
+        let oldScoreValue = 0;
+        if (args.subKey && currentScores[args.category]?.[args.criteriaKey]?.[args.subKey] !== undefined) {
+          oldScoreValue = currentScores[args.category][args.criteriaKey][args.subKey];
+        } else if (!args.subKey && currentScores[args.category]?.[args.criteriaKey] !== undefined) {
+          oldScoreValue = currentScores[args.category][args.criteriaKey];
+        }
+
         // Criar log de atividade
         await ctx.db.insert("activityLogs", {
           clubId,
@@ -314,22 +356,22 @@ export const batchEvaluateClubs = mutation({
           action: "BATCH_EVALUATE",
           timestamp: Date.now(),
           details: args.notes || `Avaliação em lote - ${
-            args.scoreType === 'maximum' ? '100% Completo (sem penalidade)' : 
-            args.scoreType === 'partial' ? `Parcial (penalidade: ${Math.abs(scoreValue)} pts)` : 
-            `Não atendeu (penalidade: ${Math.abs(scoreValue)} pts)`
+            args.scoreType === 'maximum' ? '100% Completo' : 
+            args.scoreType === 'partial' ? 'Parcial' : 
+            'Não atendeu'
           }`,
           scoreChange: {
             category: args.category,
             subcategory: args.criteriaKey,
-            oldValue: club.totalScore,
-            newValue: club.totalScore + scoreValue,
-            difference: scoreValue,
+            oldValue: oldScoreValue,
+            newValue: displayScore,
+            difference: displayScore - oldScoreValue,
           },
         });
 
-        // Atualizar pontuação total do clube
+        // Atualizar clube com a nova estrutura de scores
         await ctx.db.patch(clubId, {
-          totalScore: club.totalScore + scoreValue,
+          scores: updatedScores,
         });
 
         results.push({ clubId, success: true, score: scoreValue });

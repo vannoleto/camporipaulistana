@@ -469,7 +469,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-blue-600">
-              {totalScore.toLocaleString()}
+              {calculateTotalScore(userClub.scores).toLocaleString()}
             </div>
             <div className="text-sm text-gray-600">Pontos Totais</div>
           </div>

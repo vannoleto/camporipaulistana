@@ -215,73 +215,49 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    console.log("=== CÁLCULO DE PONTUAÇÃO ===");
-    console.log("Scores do clube:", clubScores);
-    console.log("Critérios locked:", Array.from(lockedCriteria));
-
-    // Iterar por todas as categorias
+    // Calcular penalidades baseado nos critérios dinâmicos (igual AdminDashboard)
     Object.keys(clubScores).forEach(category => {
       if (!scoringCriteria[category]) return;
+      const categoryScores = clubScores[category];
+      if (typeof categoryScores !== 'object') return;
 
       // DEMÉRITOS: São valores negativos, somar diretamente
       if (category === 'demerits') {
-        Object.keys(clubScores[category]).forEach(key => {
-          const demeritValue = clubScores[category][key];
+        Object.keys(categoryScores).forEach(key => {
+          const demeritValue = categoryScores[key];
           if (typeof demeritValue === 'number') {
-            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
-            console.log(`⚠ Demérito ${key}: ${demeritValue} → Penalidade: ${Math.abs(demeritValue)}`);
+            demeritsPenalty += Math.abs(demeritValue);
           }
         });
         return;
       }
 
       // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
-      Object.keys(clubScores[category]).forEach(key => {
-        // IMPORTANTE: Só calcular penalidade se o critério foi AVALIADO (locked)
-        const criteriaKey = `${category}.${key}`;
-        if (!lockedCriteria.has(criteriaKey)) {
-          console.log(`⊘ ${category}.${key}: NÃO AVALIADO (ignorado)`);
-          return; // Critério não avaliado = não desconta nada
-        }
+      Object.keys(categoryScores).forEach(key => {
+        const earnedPoints = categoryScores[key];
+        if (typeof earnedPoints !== 'number') return;
 
-        const earnedPoints = clubScores[category][key] || 0;
-        const criterion = scoringCriteria[category][key];
-        
+        const criterion = scoringCriteria[category]?.[key];
         if (!criterion) return;
 
         const maxPoints = criterion.max || 0;
         const partialPoints = criterion.partial || 0;
 
-        // Calcular penalidade baseado no que foi conquistado
         let penalty = 0;
-
         if (earnedPoints === maxPoints) {
-          // Ganhou pontuação máxima → Não perde nada
           penalty = 0;
-          console.log(`✓ ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} → Penalidade: 0`);
         } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
           penalty = maxPoints - partialPoints;
-          console.log(`⚠ ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} (parcial) → Penalidade: ${penalty}`);
         } else if (earnedPoints === 0) {
-          // Ganhou zero → Perde tudo (max)
           penalty = maxPoints;
-          console.log(`✗ ${criterion.description}: Ganhou 0/${maxPoints} → Penalidade: ${penalty}`);
         } else {
-          // Caso customizado: perde a diferença entre max e o que ganhou
           penalty = maxPoints - earnedPoints;
-          console.log(`? ${criterion.description}: Ganhou ${earnedPoints}/${maxPoints} → Penalidade: ${penalty}`);
         }
-
         totalPenalty += penalty;
       });
     });
 
-    console.log(`TOTAL DE PENALIDADES: ${totalPenalty}`);
-    console.log(`DEMÉRITOS: ${demeritsPenalty}`);
-    console.log(`PONTUAÇÃO FINAL: ${MAX_SCORE} - ${totalPenalty} - ${demeritsPenalty} = ${MAX_SCORE - totalPenalty - demeritsPenalty}`);
-
-    // Pontuação final = Máximo - Penalidades totais - Deméritos
+    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
     return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
   };
 
@@ -327,7 +303,49 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
       demerits: <X size={20} />
     };
 
-    const totalScore = calculateTotalScore(scores);
+    // Calcular pontuação total igual ao AdminDashboard (considera todos critérios)
+    // Usar sempre os dados em tempo real do backend para pontuação
+    const totalScore = (() => {
+      const scores = selectedClubData?.scores || selectedClub?.scores;
+      if (!scores || !scoringCriteria) return 1910;
+      const MAX_SCORE = 1910;
+      let totalPenalty = 0;
+      let demeritsPenalty = 0;
+      Object.keys(scores).forEach(category => {
+        if (!scoringCriteria[category]) return;
+        const categoryScores = scores[category];
+        if (typeof categoryScores !== 'object') return;
+        if (category === 'demerits') {
+          Object.keys(categoryScores).forEach(key => {
+            const demeritValue = categoryScores[key];
+            if (typeof demeritValue === 'number') {
+              demeritsPenalty += Math.abs(demeritValue);
+            }
+          });
+          return;
+        }
+        Object.keys(categoryScores).forEach(key => {
+          const earnedPoints = categoryScores[key];
+          if (typeof earnedPoints !== 'number') return;
+          const criterion = scoringCriteria[category]?.[key];
+          if (!criterion) return;
+          const maxPoints = criterion.max || 0;
+          const partialPoints = criterion.partial || 0;
+          let penalty = 0;
+          if (earnedPoints === maxPoints) {
+            penalty = 0;
+          } else if (earnedPoints === partialPoints && partialPoints > 0) {
+            penalty = maxPoints - partialPoints;
+          } else if (earnedPoints === 0) {
+            penalty = maxPoints;
+          } else {
+            penalty = maxPoints - earnedPoints;
+          }
+          totalPenalty += penalty;
+        });
+      });
+      return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+    })();
     const classification = getClassification(totalScore);
 
     return (
@@ -573,9 +591,15 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
             <div className="text-center py-8 text-gray-500">Nenhum clube cadastrado</div>
           ) : (
             clubs.map((club: any) => {
+              console.log(`📊 StaffDashboard - Clube: ${club.name}`, {
+                scores: club.scores,
+                hasScores: !!club.scores,
+                scoringCriteria: !!scoringCriteria
+              });
               const totalScore = calculateTotalScore(club.scores);
               const classification = getClassification(totalScore);
-              
+              console.log(`📊 StaffDashboard - Resultado: ${club.name} = ${totalScore} pts (${classification.name})`);
+
               return (
                 <div
                   key={club._id}
@@ -603,7 +627,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                       </div>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => initializeScores(club)}
                     className="w-full bg-gradient-to-r from-campori-brown to-campori-darkRed text-white py-3 rounded-lg font-semibold hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
