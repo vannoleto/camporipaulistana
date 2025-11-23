@@ -116,8 +116,8 @@ export function AdminScoringMobile({
     });
   };
 
-  const totalScore = calculateTotalScore(editingScores);
-  const classification = getClassification(totalScore);
+  const totalScore = selectedClub.totalScore || 1910;
+  const classification = selectedClub.classification || getClassification(totalScore);
 
   const categories = [
     { 

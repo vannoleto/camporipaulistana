@@ -1497,8 +1497,19 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     };
 
     const currentScores = editingScores;
-    const totalScore = selectedClub.totalScore || 1910;
-    const classification = selectedClub.classification || getClassification(totalScore);
+    
+    // BUSCAR clube atualizado da lista para ter totalScore correto
+    const updatedClub = clubs?.find(c => c._id === selectedClub._id) || selectedClub;
+    console.log("🔍 AdminDashboard renderEvaluation:", {
+      selectedClubId: selectedClub._id,
+      selectedClubName: selectedClub.name,
+      selectedClubTotalScore: selectedClub.totalScore,
+      updatedClubTotalScore: updatedClub.totalScore,
+      clubsLength: clubs?.length,
+      foundUpdated: !!clubs?.find(c => c._id === selectedClub._id)
+    });
+    const totalScore = updatedClub.totalScore || 1910;
+    const classification = updatedClub.classification || getClassification(totalScore);
 
     const renderScoreSection = (title: any, category: string, data: any, scores: any, isDemerits = false) => (
       <div className={`p-6 rounded-xl shadow-sm ${isDemerits ? 'bg-red-50 border border-red-200' : 'bg-white'}`}>
@@ -1683,7 +1694,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
               <div>
                 <h3 className="text-lg font-semibold">Pontuação Atual</h3>
                 <p className="text-blue-100">
-                  Inscritos: {selectedClub?.membersCount || 0} Membros
+                  Inscritos: {updatedClub?.membersCount || 0} Membros
                 </p>
               </div>
               <div className="text-right">
@@ -1720,7 +1731,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             <div className="text-blue-800">
               <p className="font-medium">Controle de Presença</p>
               <p className="text-sm">
-                Alguns critérios exigem 100% de presença dos membros inscritos ({selectedClub?.membersCount || 0} membros). Verifique se todos estão presentes antes de avaliar.
+                Alguns critérios exigem 100% de presença dos membros inscritos ({updatedClub?.membersCount || 0} membros). Verifique se todos estão presentes antes de avaliar.
               </p>
             </div>
           </div>
@@ -1856,7 +1867,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
   const renderEvaluation = () => {
     return selectedClub ? (
       <AdminScoringMobile
-        selectedClub={selectedClub}
+        selectedClub={clubs?.find(c => c._id === selectedClub._id) || selectedClub}
         editingScores={editingScores}
         scoringCriteria={scoringCriteria}
         adminEditMode={adminEditMode}
