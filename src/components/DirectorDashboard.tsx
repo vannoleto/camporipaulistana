@@ -256,46 +256,99 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
 
 
   // Função para calcular pontuação total baseada na estrutura de pontuações (IGUAL AO ADMINDASHBOARD E STAFFDASHBOARD)
-  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
+  // SISTEMA SUBTRATIVO: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios AVALIADOS
   const calculateTotalScore = (scores: any) => {
-    if (!scoringCriteria) return 1910; // Pontuação máxima inicial
+    if (!scores || !scoringCriteria) return 1910; // Pontuação máxima inicial
 
     const MAX_SCORE = 1910;
-    let totalEarned = 0;
+    let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    // Calcular pontos GANHOS de todas as categorias usando ACTIVITY LOGS
-    if (activityLogs && activityLogs.length > 0) {
-      // Agrupar logs por categoria/subcategoria para pegar o valor mais recente
-      const latestScores: any = {};
-      
-      activityLogs.forEach((log: any) => {
-        if (log.scoreChange) {
-          const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
-          if (!latestScores[key] || log.timestamp > latestScores[key].timestamp) {
-            latestScores[key] = {
-              category: log.scoreChange.category,
-              subcategory: log.scoreChange.subcategory,
-              value: log.scoreChange.newValue,
-              timestamp: log.timestamp
-            };
+    // Calcular penalidades APENAS para critérios que foram AVALIADOS (valor diferente de 0)
+    Object.keys(scores).forEach(category => {
+      if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
+
+      const categoryScores = scores[category];
+      if (typeof categoryScores !== 'object') return;
+
+      // DEMÉRITOS: São valores negativos, somar diretamente
+      if (category === 'demerits') {
+        Object.keys(categoryScores).forEach(key => {
+          const demeritValue = categoryScores[key];
+          if (typeof demeritValue === 'number' && demeritValue !== 0) {
+            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
           }
-        }
-      });
+        });
+        return;
+      }
 
-      // Somar todos os pontos ganhos
-      Object.values(latestScores).forEach((score: any) => {
-        if (score.category === 'demerits') {
-          demeritsPenalty += Math.abs(score.value);
+      // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
+      Object.keys(categoryScores).forEach(key => {
+        const earnedPoints = categoryScores[key];
+        
+        // Ignorar objetos aninhados - serão processados recursivamente
+        if (typeof earnedPoints !== 'number') {
+          // Processar carousel ou outros objetos aninhados
+          if (typeof earnedPoints === 'object') {
+            Object.keys(earnedPoints).forEach(subKey => {
+              const subValue = earnedPoints[subKey];
+              if (typeof subValue !== 'number') return;
+              
+              // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
+              if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+              
+              const subCriterion = scoringCriteria[category]?.[key]?.[subKey];
+              if (!subCriterion) return;
+              
+              const maxPoints = subCriterion.max || 0;
+              const partialPoints = subCriterion.partial || 0;
+              
+              let penalty = 0;
+              if (subValue === maxPoints) {
+                penalty = 0;
+              } else if (subValue === partialPoints && partialPoints > 0) {
+                penalty = maxPoints - partialPoints;
+              } else {
+                penalty = maxPoints - subValue;
+              }
+              totalPenalty += penalty;
+            });
+          }
+          return;
+        }
+
+        // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
+        // Não aplicar penalidade para critérios não avaliados!
+        if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
+
+        const criterion = scoringCriteria[category]?.[key];
+        if (!criterion) return; // Ignorar critérios não definidos
+
+        const maxPoints = criterion.max || 0;
+        const partialPoints = criterion.partial || 0;
+
+        // Calcular penalidade baseado no que foi conquistado
+        let penalty = 0;
+
+        if (earnedPoints === maxPoints) {
+          // Ganhou pontuação máxima → Não perde nada
+          penalty = 0;
+        } else if (earnedPoints === partialPoints && partialPoints > 0) {
+          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
+          penalty = maxPoints - partialPoints;
         } else {
-          totalEarned += score.value || 0;
+          // Caso customizado: perde a diferença entre max e o que ganhou
+          penalty = maxPoints - earnedPoints;
         }
-      });
-    }
 
-    // Pontuação final = Pontos ganhos - Deméritos
-    // NÃO subtrair do máximo, apenas somar o que foi ganho
-    return Math.max(0, totalEarned - demeritsPenalty);
+        totalPenalty += penalty;
+      });
+    });
+
+    // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
+    const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+    console.log(`📊 Director calculateTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
+    return finalScore;
   };
 
   // Função para obter classificação baseada na pontuação
