@@ -184,7 +184,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades baseado nos critérios dinâmicos
+    // Calcular penalidades APENAS para critérios que foram AVALIADOS (valor diferente de 0)
     Object.keys(scores).forEach(category => {
       if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
 
@@ -195,17 +195,51 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       if (category === 'demerits') {
         Object.keys(categoryScores).forEach(key => {
           const demeritValue = categoryScores[key];
-          if (typeof demeritValue === 'number') {
+          if (typeof demeritValue === 'number' && demeritValue !== 0) {
             demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
           }
         });
         return;
       }
 
-      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
+      // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
-        if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
+        
+        // Ignorar objetos aninhados - serão processados recursivamente
+        if (typeof earnedPoints !== 'number') {
+          // Processar carousel ou outros objetos aninhados
+          if (typeof earnedPoints === 'object') {
+            Object.keys(earnedPoints).forEach(subKey => {
+              const subValue = earnedPoints[subKey];
+              if (typeof subValue !== 'number') return;
+              
+              // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
+              if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+              
+              const subCriterion = scoringCriteria[category]?.[key]?.[subKey];
+              if (!subCriterion) return;
+              
+              const maxPoints = subCriterion.max || 0;
+              const partialPoints = subCriterion.partial || 0;
+              
+              let penalty = 0;
+              if (subValue === maxPoints) {
+                penalty = 0;
+              } else if (subValue === partialPoints && partialPoints > 0) {
+                penalty = maxPoints - partialPoints;
+              } else {
+                penalty = maxPoints - subValue;
+              }
+              totalPenalty += penalty;
+            });
+          }
+          return;
+        }
+
+        // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
+        // Não aplicar penalidade para critérios não avaliados!
+        if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
 
         const criterion = scoringCriteria[category]?.[key];
         if (!criterion) return; // Ignorar critérios não definidos
@@ -222,9 +256,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         } else if (earnedPoints === partialPoints && partialPoints > 0) {
           // Ganhou pontuação parcial → Perde a diferença (max - parcial)
           penalty = maxPoints - partialPoints;
-        } else if (earnedPoints === 0) {
-          // Ganhou zero → Perde tudo (max)
-          penalty = maxPoints;
         } else {
           // Caso customizado: perde a diferença entre max e o que ganhou
           penalty = maxPoints - earnedPoints;
@@ -234,7 +265,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
+    // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
     const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
     console.log(`📊 Admin calculateTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
     return finalScore;
