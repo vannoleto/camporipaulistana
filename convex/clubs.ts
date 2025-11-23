@@ -606,28 +606,40 @@ export const resetAllClubScores = mutation({
       },
     };
 
-    // Limpar todos os logs de atividade antes de resetar
-    const allActivityLogs = await ctx.db.query("activityLogs").collect();
-    for (const log of allActivityLogs) {
-      await ctx.db.delete(log._id);
+    // Limpar logs de atividade em lotes pequenos para evitar limite de leituras
+    let activityLogsBatch = await ctx.db.query("activityLogs").take(100);
+    while (activityLogsBatch.length > 0) {
+      for (const log of activityLogsBatch) {
+        await ctx.db.delete(log._id);
+      }
+      activityLogsBatch = await ctx.db.query("activityLogs").take(100);
     }
 
-    // Limpar todos os critérios travados
-    const allEvaluatedCriteria = await ctx.db.query("evaluatedCriteria").collect();
-    for (const criteria of allEvaluatedCriteria) {
-      await ctx.db.delete(criteria._id);
+    // Limpar critérios travados em lotes pequenos
+    let evaluatedCriteriaBatch = await ctx.db.query("evaluatedCriteria").take(100);
+    while (evaluatedCriteriaBatch.length > 0) {
+      for (const criteria of evaluatedCriteriaBatch) {
+        await ctx.db.delete(criteria._id);
+      }
+      evaluatedCriteriaBatch = await ctx.db.query("evaluatedCriteria").take(100);
     }
 
-    for (const club of clubs) {
-      const totalScore = calculateTotalScore(maxScores);
-      const classification = getClassification(totalScore);
-
-      await ctx.db.patch(club._id, {
-        totalScore,
-        classification,
-        scores: maxScores,
-      });
-      updatedCount++;
+    // Atualizar todos os clubes em lotes pequenos
+    let clubsBatch = await ctx.db.query("clubs").take(100);
+    let updatedCount = 0;
+    const totalScore = calculateTotalScore(maxScores);
+    const classification = getClassification(totalScore);
+    
+    while (clubsBatch.length > 0) {
+      for (const club of clubsBatch) {
+        await ctx.db.patch(club._id, {
+          totalScore,
+          classification,
+          scores: maxScores,
+        });
+        updatedCount++;
+      }
+      clubsBatch = await ctx.db.query("clubs").take(100);
     }
 
     // Criar log do reset geral
