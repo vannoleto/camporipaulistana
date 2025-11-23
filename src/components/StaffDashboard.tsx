@@ -354,9 +354,9 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
       demerits: <X size={20} />
     };
 
-    // Calcular pontuação total usando ACTIVITY LOGS
-    const totalScore = calculateTotalScore(selectedClubData?.scores || selectedClub?.scores);
-    const classification = getClassification(totalScore);
+    // Usar pontuação total do banco de dados (já calculada corretamente no backend)
+    const totalScore = selectedClubData?.totalScore || selectedClub?.totalScore || 1910;
+    const classification = selectedClubData?.classification || selectedClub?.classification || getClassification(totalScore);
 
     return (
       <div className="space-y-4">

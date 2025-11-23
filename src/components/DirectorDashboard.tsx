@@ -396,8 +396,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     }
 
     const currentScores = userClub.scores;
-    const totalScore = calculateTotalScore(currentScores);
-    const classification = getClassification(totalScore);
+    const totalScore = userClub.totalScore || 1910;
+    const classification = userClub.classification || getClassification(totalScore);
     const maxPossibleScore = 1910; // Score máximo possível
     const progressPercentage = Math.min((totalScore / maxPossibleScore) * 100, 100);
 
@@ -486,7 +486,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-blue-600">
-              {calculateTotalScore(userClub.scores).toLocaleString()}
+              {(userClub.totalScore || 1910).toLocaleString()}
             </div>
             <div className="text-sm text-gray-600">Pontos Totais</div>
           </div>
@@ -798,8 +798,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     }
 
     const currentScores = userClub.scores;
-    const totalScore = calculateTotalScore(currentScores);
-    const classification = getClassification(totalScore);
+    const totalScore = userClub.totalScore || 1910;
+    const classification = userClub.classification || getClassification(totalScore);
 
     return (
       <div className="space-y-6">
@@ -1026,15 +1026,15 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold">
-                {calculateTotalScore(currentScores).toLocaleString()} pts
+                {(userClub?.totalScore || 1910).toLocaleString()} pts
               </div>
               <div className="text-lg flex items-center gap-3 mt-2">
-                {getClassification(calculateTotalScore(currentScores)) === "MISSIONÁRIO" ? (
+                {(userClub?.classification || getClassification(userClub?.totalScore || 1910)) === "MISSIONÁRIO" ? (
                   <>
                     <Crown size={20} className="text-yellow-500" />
                     MISSIONÁRIO
                   </>
-                ) : getClassification(calculateTotalScore(currentScores)) === "VOLUNTÁRIO" ? (
+                ) : (userClub?.classification || getClassification(userClub?.totalScore || 1910)) === "VOLUNTÁRIO" ? (
                   <>
                     <Trophy size={20} className="text-blue-500" />
                     VOLUNTÁRIO

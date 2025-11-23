@@ -1396,7 +1396,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             }
           };
           
-          const totalScore = calculateTotalScore(currentScores, club._id);
+          const totalScore = club.totalScore || 1910;
           
           return (
           <div
@@ -1497,8 +1497,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     };
 
     const currentScores = editingScores;
-    const totalScore = calculateTotalScore(currentScores, selectedClub._id);
-    const classification = getClassification(totalScore);
+    const totalScore = selectedClub.totalScore || 1910;
+    const classification = selectedClub.classification || getClassification(totalScore);
 
     const renderScoreSection = (title: any, category: string, data: any, scores: any, isDemerits = false) => (
       <div className={`p-6 rounded-xl shadow-sm ${isDemerits ? 'bg-red-50 border border-red-200' : 'bg-white'}`}>
