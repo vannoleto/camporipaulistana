@@ -121,31 +121,72 @@ const calculateTotalScore = (scores: any, criteria?: any) => {
 
   const MAX_SCORE = 1910;
   let totalPenalty = 0;
+  let demeritsPenalty = 0;
 
-  // Se não tiver critérios, usar cálculo legacy (compatibilidade)
+  // Se não tiver critérios, retornar máximo (reset)
   if (!criteria) {
-    Object.values(scores).forEach((category: any) => {
-      if (typeof category === 'object') {
-        Object.values(category).forEach((value: any) => {
-          if (typeof value === 'number') {
-            totalPenalty += Math.abs(value || 0);
-          }
-        });
-      }
-    });
-    return Math.max(0, MAX_SCORE - totalPenalty);
+    return MAX_SCORE;
   }
 
-  // Cálculo dinâmico baseado nos critérios (novo sistema)
+  // Cálculo dinâmico baseado nos critérios - SISTEMA SUBTRATIVO
+  // APENAS penalizar critérios que foram AVALIADOS (valor diferente de 0)
   Object.keys(scores).forEach(category => {
     if (!criteria[category]) return; // Ignorar categorias sem critérios
 
-    Object.keys(scores[category]).forEach(key => {
-      const earnedPoints = scores[category][key] || 0;
-      const criterion = criteria[category][key];
+    const categoryScores = scores[category];
+    if (typeof categoryScores !== 'object') return;
+
+    // DEMÉRITOS: São valores negativos, somar diretamente
+    if (category === 'demerits') {
+      Object.keys(categoryScores).forEach(key => {
+        const demeritValue = categoryScores[key];
+        if (typeof demeritValue === 'number' && demeritValue !== 0) {
+          demeritsPenalty += Math.abs(demeritValue);
+        }
+      });
+      return;
+    }
+
+    // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
+    Object.keys(categoryScores).forEach(key => {
+      const earnedPoints = categoryScores[key];
       
+      // Processar objetos aninhados (carousel)
+      if (typeof earnedPoints !== 'number') {
+        if (typeof earnedPoints === 'object') {
+          Object.keys(earnedPoints).forEach(subKey => {
+            const subValue = earnedPoints[subKey];
+            if (typeof subValue !== 'number') return;
+            
+            // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
+            if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+            
+            const subCriterion = criteria[category]?.[key]?.[subKey];
+            if (!subCriterion) return;
+            
+            const maxPoints = subCriterion.max || 0;
+            const partialPoints = subCriterion.partial || 0;
+            
+            let penalty = 0;
+            if (subValue === maxPoints) {
+              penalty = 0;
+            } else if (subValue === partialPoints && partialPoints > 0) {
+              penalty = maxPoints - partialPoints;
+            } else {
+              penalty = maxPoints - subValue;
+            }
+            totalPenalty += penalty;
+          });
+        }
+        return;
+      }
+
+      // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
+      // Não aplicar penalidade para critérios não avaliados!
+      if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
+
+      const criterion = criteria[category]?.[key];
       if (!criterion) return; // Ignorar critérios não definidos
-      if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
 
       const maxPoints = criterion.max || 0;
       const partialPoints = criterion.partial || 0;
@@ -159,23 +200,18 @@ const calculateTotalScore = (scores: any, criteria?: any) => {
       } else if (earnedPoints === partialPoints && partialPoints > 0) {
         // Ganhou pontuação parcial → Perde a diferença (max - parcial)
         penalty = maxPoints - partialPoints;
-      } else if (earnedPoints === 0) {
-        // Ganhou zero → Perde tudo (max)
-        penalty = maxPoints;
       } else {
         // Caso customizado: perde a diferença entre max e o que ganhou
         penalty = maxPoints - earnedPoints;
       }
 
-      console.log(`📊 Critério: ${category}.${key} | Ganhou: ${earnedPoints}/${maxPoints} | Penalidade: ${penalty}`);
       totalPenalty += penalty;
     });
   });
 
-  console.log(`📊 Penalidade Total: ${totalPenalty} | Pontuação Final: ${MAX_SCORE - totalPenalty}`);
-
-  // Pontuação final = Máximo (1910) - Penalidades totais
-  return Math.max(0, MAX_SCORE - totalPenalty);
+  // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
+  const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+  return finalScore;
 };
 
 // Função para determinar classificação (Campori Paulistana 2025)
@@ -547,12 +583,6 @@ export const initializeClubs = mutation({
 export const resetAllClubScores = mutation({
   args: {},
   handler: async (ctx): Promise<{ success: boolean; deletedLogs: number; deletedCriteria: number; updatedClubs: number; hasMore: boolean; message: string; }> => {
-    // Buscar critérios de pontuação atuais - removendo a dependência de query externa (updated)
-    // const criteria = await ctx.runQuery(api.scoring.getScoringCriteria, {});
-    // if (!criteria) {
-    //   throw new Error("Critérios de pontuação não encontrados. Configure os critérios primeiro.");
-    // }
-
     // Sistema de DEDUÇÃO: clubes iniciam com 1910 pts (sem penalidades)
     // Valores zerados = pontuação máxima (1910 pontos)
     const maxScores = {
@@ -602,9 +632,8 @@ export const resetAllClubScores = mutation({
       },
     };
 
-    // ESTRATÉGIA ULTRA-OTIMIZADA: Processar apenas 50 itens por execução
-    // Para resetar tudo, executar múltiplas vezes até não haver mais dados
-    const BATCH_SIZE = 50;
+    // OTIMIZAÇÃO MÁXIMA: Processar 200 itens por lote (mais rápido)
+    const BATCH_SIZE = 200;
     
     let operations = {
       deletedLogs: 0,
@@ -612,23 +641,25 @@ export const resetAllClubScores = mutation({
       updatedClubs: 0
     };
 
-    // Fase 1: Deletar logs (50 de cada vez)
+    // Fase 1: Deletar logs (200 de cada vez) - SEM Promise.all para evitar sobrecarga
     const activityLogs = await ctx.db.query("activityLogs").take(BATCH_SIZE);
     for (const log of activityLogs) {
       await ctx.db.delete(log._id);
       operations.deletedLogs++;
     }
 
-    // Fase 2: Deletar critérios travados (50 de cada vez)
+    // Fase 2: Deletar critérios travados (200 de cada vez)
     const evaluatedCriteria = await ctx.db.query("evaluatedCriteria").take(BATCH_SIZE);
     for (const criteria of evaluatedCriteria) {
       await ctx.db.delete(criteria._id);
       operations.deletedCriteria++;
     }
 
-    // Fase 3: Atualizar clubes (50 de cada vez)
+    // Fase 3: Atualizar clubes (200 de cada vez)
     const clubs = await ctx.db.query("clubs").take(BATCH_SIZE);
-    const totalScore = calculateTotalScore(maxScores);
+    
+    // PONTUAÇÃO MÁXIMA: Todos os scores em 0 = sem avaliações = 1910 pontos
+    const totalScore = 1910;
     const classification = getClassification(totalScore);
     
     for (const club of clubs) {
@@ -646,24 +677,12 @@ export const resetAllClubScores = mutation({
     const hasMoreClubs = clubs.length === BATCH_SIZE;
     const hasMore = hasMoreLogs || hasMoreCriteria || hasMoreClubs;
 
-    // Log apenas se for a última execução ou se não houver mais dados
-    if (!hasMore) {
-      await ctx.db.insert("activityLogs", {
-        userId: undefined,
-        userName: "Sistema",
-        userRole: "system",
-        action: "system_reset",
-        details: `Reset completo! Total processado: ${operations.updatedClubs} clubes, ${operations.deletedLogs} logs deletados, ${operations.deletedCriteria} critérios limpos.`,
-        timestamp: Date.now(),
-      });
-    }
-
     return { 
       success: true, 
       ...operations,
       hasMore,
       message: hasMore 
-        ? `Processando em lotes... Execute novamente. (${operations.updatedClubs} clubes, ${operations.deletedLogs} logs, ${operations.deletedCriteria} critérios)`
+        ? `Processando... ${operations.updatedClubs} clubes, ${operations.deletedLogs} logs, ${operations.deletedCriteria} critérios`
         : `✅ Reset completo! ${operations.updatedClubs} clubes resetados para 1910 pontos.`
     };
   },
@@ -1200,7 +1219,7 @@ export const getDetailedEvaluationLogs = query({
   },
 });
 
-// Limpar todos os logs de atividade (para reset completo)
+// Limpar todos os logs de atividade (para reset completo) - OTIMIZADO COM LOTES
 export const clearAllActivityLogs = mutation({
   args: {
     adminId: v.id("users"),
@@ -1212,15 +1231,25 @@ export const clearAllActivityLogs = mutation({
       throw new Error("Apenas administradores podem limpar os logs de atividade");
     }
 
-    // Buscar todos os logs de atividade
-    const allLogs = await ctx.db.query("activityLogs").collect();
+    // OTIMIZAÇÃO: Processar em lotes de 300 de cada vez
+    const BATCH_SIZE = 300;
+    const logs = await ctx.db.query("activityLogs").take(BATCH_SIZE);
     
-    // Deletar todos os logs
-    await Promise.all(allLogs.map(log => ctx.db.delete(log._id)));
+    // Deletar logs em lote
+    let deleteCount = 0;
+    for (const log of logs) {
+      await ctx.db.delete(log._id);
+      deleteCount++;
+    }
+
+    const hasMore = logs.length === BATCH_SIZE;
 
     return {
-      message: "Todos os logs de atividade foram limpos com sucesso",
-      count: allLogs.length
+      message: hasMore 
+        ? `Processando... ${deleteCount} logs deletados`
+        : `Logs limpos!`,
+      count: deleteCount,
+      hasMore
     };
   },
 

@@ -620,19 +620,42 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
   const handleResetClubsToMaxScore = async () => {
     try {
-      const result = await resetClubsToMaxScore({});
+      toast.info("Iniciando reset...");
       
+      // Limpar travamentos primeiro
       await clearAllCriteriaLocks({
         adminId: user._id,
       });
       
-      const historyResult = await clearAllActivityLogs({
-        adminId: user._id,
-      });
+      // Limpar histórico em lotes (SEM delay entre chamadas)
+      let historyHasMore = true;
+      let totalHistoryDeleted = 0;
+      let historyLoops = 0;
       
-      toast.success(`${result} - Travamentos e histórico foram limpos. ${historyResult.count} registros de histórico removidos.`);
+      while (historyHasMore && historyLoops < 50) { // Máximo 50 loops (15.000 logs)
+        const historyResult = await clearAllActivityLogs({
+          adminId: user._id,
+        });
+        totalHistoryDeleted += historyResult.count;
+        historyHasMore = historyResult.hasMore || false;
+        historyLoops++;
+      }
+      
+      // Resetar pontuações em lotes (SEM delay entre chamadas)
+      let scoresHasMore = true;
+      let totalClubsReset = 0;
+      let scoresLoops = 0;
+      
+      while (scoresHasMore && scoresLoops < 20) { // Máximo 20 loops (4.000 clubes)
+        const result = await resetClubsToMaxScore({});
+        totalClubsReset = result.updatedClubs;
+        scoresHasMore = result.hasMore || false;
+        scoresLoops++;
+      }
+      
+      toast.success(`✅ Reset completo! ${totalClubsReset} clubes resetados para 1910 pontos. ${totalHistoryDeleted} logs removidos.`);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(`Erro: ${error.message}`);
     }
   };
 
