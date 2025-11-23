@@ -116,7 +116,7 @@ const createInitialScoreStructure = (criteria: any) => {
 };
 
 // Função para calcular pontuação total
-const calculateTotalScore = (scores: any, criteria?: any) => {
+const calculateTotalScore = (scores: any, criteria?: any, evaluatedCriteria?: Set<string>) => {
   if (!scores) return 1910; // Pontuação máxima inicial do Campori
 
   const MAX_SCORE = 1910;
@@ -128,15 +128,15 @@ const calculateTotalScore = (scores: any, criteria?: any) => {
     return MAX_SCORE;
   }
 
-  // Cálculo dinâmico baseado nos critérios - SISTEMA SUBTRATIVO
-  // APENAS penalizar critérios que foram AVALIADOS (valor diferente de 0)
+  // SISTEMA SUBTRATIVO: Clubes começam com 1910 e PERDEM pontos
+  // REGRA: penalty = maxPoints - earnedPoints (APENAS para critérios AVALIADOS)
   Object.keys(scores).forEach(category => {
-    if (!criteria[category]) return; // Ignorar categorias sem critérios
+    if (!criteria[category]) return;
 
     const categoryScores = scores[category];
     if (typeof categoryScores !== 'object') return;
 
-    // DEMÉRITOS: São valores negativos, somar diretamente
+    // DEMÉRITOS: Sempre penalizar se != 0
     if (category === 'demerits') {
       Object.keys(categoryScores).forEach(key => {
         const demeritValue = categoryScores[key];
@@ -147,7 +147,7 @@ const calculateTotalScore = (scores: any, criteria?: any) => {
       return;
     }
 
-    // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
+    // OUTRAS CATEGORIAS
     Object.keys(categoryScores).forEach(key => {
       const earnedPoints = categoryScores[key];
       
@@ -158,58 +158,37 @@ const calculateTotalScore = (scores: any, criteria?: any) => {
             const subValue = earnedPoints[subKey];
             if (typeof subValue !== 'number') return;
             
-            // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
-            if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+            // VERIFICAR SE FOI AVALIADO
+            const criteriaKey = `${category}_${key}.${subKey}`;
+            if (evaluatedCriteria && evaluatedCriteria.size > 0 && !evaluatedCriteria.has(criteriaKey)) return;
             
             const subCriterion = criteria[category]?.[key]?.[subKey];
             if (!subCriterion) return;
             
             const maxPoints = subCriterion.max || 0;
-            const partialPoints = subCriterion.partial || 0;
-            
-            let penalty = 0;
-            if (subValue === maxPoints) {
-              penalty = 0;
-            } else if (subValue === partialPoints && partialPoints > 0) {
-              penalty = maxPoints - partialPoints;
-            } else {
-              penalty = maxPoints - subValue;
-            }
-            totalPenalty += penalty;
+            const penalty = maxPoints - subValue;
+            totalPenalty += Math.max(0, penalty);
           });
         }
         return;
       }
 
-      // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
-      // Não aplicar penalidade para critérios não avaliados!
-      if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
-
-      const criterion = criteria[category]?.[key];
-      if (!criterion) return; // Ignorar critérios não definidos
-
-      const maxPoints = criterion.max || 0;
-      const partialPoints = criterion.partial || 0;
-
-      // Calcular penalidade baseado no que foi conquistado
-      let penalty = 0;
-
-      if (earnedPoints === maxPoints) {
-        // Ganhou pontuação máxima → Não perde nada
-        penalty = 0;
-      } else if (earnedPoints === partialPoints && partialPoints > 0) {
-        // Ganhou pontuação parcial → Perde a diferença (max - parcial)
-        penalty = maxPoints - partialPoints;
-      } else {
-        // Caso customizado: perde a diferença entre max e o que ganhou
-        penalty = maxPoints - earnedPoints;
+      // VERIFICAR SE FOI AVALIADO
+      const criteriaKey = `${category}_${key}`;
+      if (evaluatedCriteria && evaluatedCriteria.size > 0 && !evaluatedCriteria.has(criteriaKey)) {
+        return;
       }
 
-      totalPenalty += penalty;
+      const criterion = criteria[category]?.[key];
+      if (!criterion) return;
+
+      const maxPoints = criterion.max || 0;
+      const penalty = maxPoints - earnedPoints;
+      totalPenalty += Math.max(0, penalty);
     });
   });
 
-  // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
+  // Pontuação final = Máximo (1910) - Penalidades - Deméritos
   const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
   return finalScore;
 };
@@ -546,7 +525,7 @@ export const initializeClubs = mutation({
       if (!existingClub) {
         // Criar estrutura de pontuações inicial (zero)
         const initialScores = createInitialScoreStructure(criteria);
-        const totalScore = calculateTotalScore(initialScores);
+        const totalScore = calculateTotalScore(initialScores, criteria, new Set());
         const classification = getClassification(totalScore);
 
         await ctx.db.insert("clubs", {
@@ -563,7 +542,9 @@ export const initializeClubs = mutation({
         // Atualizar clube existente se não tiver pontuações definidas
         if (!existingClub.scores) {
           const initialScores = createInitialScoreStructure(criteria);
-          const totalScore = calculateTotalScore(initialScores);
+          const logs = await ctx.db.query("activityLogs").filter(q => q.eq(q.field("clubId"), existingClub._id)).collect();
+          const evaluatedCriteria = new Set(logs.filter(l => l.scoreChange).map(l => `${l.scoreChange!.category}_${l.scoreChange!.subcategory}`));
+          const totalScore = calculateTotalScore(initialScores, criteria, evaluatedCriteria);
           const classification = getClassification(totalScore);
 
           await ctx.db.patch(existingClub._id, {
@@ -751,69 +732,88 @@ export const updateClubScores = mutation({
     validateScores(args.scores, criteria);
 
     // Calcular nova pontuação total e classificação
-    const newTotalScore = calculateTotalScore(mergedScores, criteria);
+    const logs = await ctx.db.query("activityLogs").filter((q: any) => q.eq(q.field("clubId"), args.clubId)).collect();
+    const evaluatedCriteria = new Set(logs.filter((l: any) => l.scoreChange).map((l: any) => `${l.scoreChange!.category}_${l.scoreChange!.subcategory}`));
+    const newTotalScore = calculateTotalScore(mergedScores, criteria, evaluatedCriteria);
     const newClassification = getClassification(newTotalScore);
+
+    // Função auxiliar para processar critérios (incluindo carousels)
+    const processScoreChange = async (category: string, key: string, newValue: any, oldValue: any, subKey?: string) => {
+      if (typeof newValue !== 'number') return;
+      
+      const fullKey = subKey ? `${key}.${subKey}` : key;
+      
+      // Verificar se o critério já está travado
+      const existingLock = await ctx.db
+        .query("evaluatedCriteria")
+        .withIndex("by_club_and_criteria", (q) => 
+          q.eq("clubId", args.clubId)
+           .eq("category", category)
+           .eq("criteriaKey", key)
+        )
+        .first();
+
+      if (!existingLock) {
+        // Travar o critério pela primeira vez
+        await ctx.db.insert("evaluatedCriteria", {
+          clubId: args.clubId,
+          category,
+          criteriaKey: key,
+          subKey: subKey,
+          evaluatedBy: args.userId,
+          evaluatedAt: Date.now(),
+          score: newValue,
+          isLocked: true,
+        });
+      } else if (oldValue !== newValue) {
+        // Atualizar score mas manter travado
+        await ctx.db.patch(existingLock._id, {
+          score: newValue,
+          subKey: subKey,
+          evaluatedBy: args.userId,
+          evaluatedAt: Date.now(),
+        });
+      }
+      
+      // Log da mudança (SEMPRE criar, mesmo para admins)
+      if (oldValue !== newValue) {
+        await ctx.db.insert("activityLogs", {
+          userId: args.userId,
+          userName: user.name,
+          userRole: user.role,
+          action: user.role === "admin" ? "admin_correction" : "score_update",
+          details: `${category}.${fullKey}: ${oldValue} → ${newValue}${user.role === "admin" ? " (correção)" : ""}`,
+          timestamp: Date.now(),
+          clubId: args.clubId,
+          clubName: club.name,
+          scoreChange: {
+            category,
+            subcategory: fullKey,
+            oldValue,
+            newValue,
+            difference: newValue - oldValue,
+          },
+        });
+      }
+    };
 
     // Registrar mudanças nos logs E travar critérios avaliados
     for (const category of Object.keys(args.scores)) {
       for (const key of Object.keys(args.scores[category])) {
-        const oldValue = currentScores[category]?.[key] || 0;
         const newValue = args.scores[category][key];
+        const oldValue = currentScores[category]?.[key];
         
-        // IGNORAR objetos aninhados (como carousel) - só processar números
-        if (typeof newValue !== 'number') {
-          continue;
-        }
-        
-        // Verificar se o critério já está travado
-        const existingLock = await ctx.db
-          .query("evaluatedCriteria")
-          .withIndex("by_club_and_criteria", (q) => 
-            q.eq("clubId", args.clubId)
-             .eq("category", category)
-             .eq("criteriaKey", key)
-          )
-          .first();
-
-        if (!existingLock) {
-          // Travar o critério pela primeira vez
-          await ctx.db.insert("evaluatedCriteria", {
-            clubId: args.clubId,
-            category,
-            criteriaKey: key,
-            evaluatedBy: args.userId,
-            evaluatedAt: Date.now(),
-            score: newValue,
-            isLocked: true,
-          });
-        } else if (oldValue !== newValue) {
-          // Atualizar score mas manter travado
-          await ctx.db.patch(existingLock._id, {
-            score: newValue,
-            evaluatedBy: args.userId,
-            evaluatedAt: Date.now(),
-          });
-        }
-        
-        // Log da mudança
-        if (oldValue !== newValue) {
-          await ctx.db.insert("activityLogs", {
-            userId: args.userId,
-            userName: user.name,
-            userRole: user.role,
-            action: "score_update",
-            details: `${category}.${key}: ${oldValue} → ${newValue}`,
-            timestamp: Date.now(),
-            clubId: args.clubId,
-            clubName: club.name,
-            scoreChange: {
-              category,
-              subcategory: key,
-              oldValue,
-              newValue,
-              difference: newValue - oldValue,
-            },
-          });
+        // Verificar se é objeto aninhado (carousel)
+        if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {
+          // Processar cada item do carousel
+          for (const subKey of Object.keys(newValue)) {
+            const subNewValue = newValue[subKey];
+            const subOldValue = (typeof oldValue === 'object' && oldValue !== null) ? oldValue[subKey] || 0 : 0;
+            await processScoreChange(category, key, subNewValue, subOldValue, subKey);
+          }
+        } else if (typeof newValue === 'number') {
+          // Processar critério simples
+          await processScoreChange(category, key, newValue, oldValue || 0);
         }
       }
     }
@@ -855,20 +855,9 @@ export const updateClubScores = mutation({
         if (!criterion) return;
         
         const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
         
-        // Calcular penalidade
-        let penalty = 0;
-        if (earnedPoints === maxPoints) {
-          penalty = 0;
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          penalty = maxPoints - partialPoints;
-        } else if (earnedPoints === 0) {
-          penalty = maxPoints;
-        } else {
-          penalty = maxPoints - earnedPoints;
-        }
-        
+        // LÓGICA SIMPLES: penalty = max - earned
+        const penalty = Math.max(0, maxPoints - earnedPoints);
         totalPenalty += penalty;
         
         // Adicionar linha ao log com nome da categoria em português
@@ -912,27 +901,71 @@ export const updateClubScores = mutation({
 });
 
 export const fixClubScores = mutation({
-  args: { adminId: v.id("users") },
+  args: { 
+    adminId: v.id("users"),
+    batchSize: v.optional(v.number()),
+    offset: v.optional(v.number())
+  },
   handler: async (ctx, args) => {
     const admin = await ctx.db.get(args.adminId);
     if (!admin || admin.role !== "admin") {
       throw new Error("Apenas administradores podem executar esta operação");
     }
 
-    const clubs = await ctx.db.query("clubs").collect();
-    let fixedCount = 0;
+    const criteria = await ctx.runQuery(api.scoring.getScoringCriteria, {});
+    if (!criteria) {
+      throw new Error("Critérios de pontuação não encontrados");
+    }
 
-    for (const club of clubs) {
+    const batchSize = args.batchSize || 3; // APENAS 3 CLUBES POR VEZ
+    const offset = args.offset || 0;
+
+    // Buscar clubes de forma simples e eficiente
+    const allClubIds = await ctx.db
+      .query("clubs")
+      .order("asc")
+      .collect()
+      .then(clubs => clubs.map(c => ({ _id: c._id, name: c.name, scores: c.scores, totalScore: c.totalScore, classification: c.classification })));
+    
+    const clubsToProcess = allClubIds.slice(offset, offset + batchSize);
+    
+    // BUSCAR LOGS APENAS DOS CLUBES DESTE LOTE - COM LIMITE
+    const logsByClub = new Map<string, Set<string>>();
+    
+    for (const club of clubsToProcess) {
+      const clubLogs = await ctx.db
+        .query("activityLogs")
+        .filter((q: any) => q.eq(q.field("clubId"), club._id))
+        .collect();
+      
+      const criteriaSet = new Set<string>();
+      clubLogs.forEach(log => {
+        if (log.scoreChange) {
+          const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+          criteriaSet.add(key);
+        }
+      });
+      
+      logsByClub.set(club._id, criteriaSet);
+    }
+    
+    let fixedCount = 0;
+    const details: string[] = [];
+
+    for (const club of clubsToProcess) {
       if (club.scores) {
-        const recalculatedScore = calculateTotalScore(club.scores);
+        const evaluatedCriteria = logsByClub.get(club._id) || new Set();
+        const recalculatedScore = calculateTotalScore(club.scores, criteria, evaluatedCriteria);
         const recalculatedClassification = getClassification(recalculatedScore);
         
+        await ctx.db.patch(club._id, {
+          totalScore: recalculatedScore,
+          classification: recalculatedClassification,
+        });
+        
         if (club.totalScore !== recalculatedScore || club.classification !== recalculatedClassification) {
-          await ctx.db.patch(club._id, {
-            totalScore: recalculatedScore,
-            classification: recalculatedClassification,
-          });
           fixedCount++;
+          details.push(`${club.name}: ${club.totalScore} → ${recalculatedScore} pts`);
         }
       }
     }
@@ -942,11 +975,24 @@ export const fixClubScores = mutation({
       userName: admin.name,
       userRole: admin.role,
       action: "system_maintenance",
-      details: `Correção de pontuações executada. ${fixedCount} clubes corrigidos.`,
+      details: `Correção de pontuações (lote ${offset}-${offset + clubsToProcess.length}). ${fixedCount} clubes corrigidos.\n${details.join('\n')}`,
       timestamp: Date.now(),
     });
 
-    return `Correção concluída! ${fixedCount} clubes tiveram suas pontuações corrigidas.`;
+    const hasMore = offset + batchSize < allClubIds.length;
+    const nextOffset = offset + batchSize;
+    const progress = Math.min(100, Math.round(((offset + clubsToProcess.length) / allClubIds.length) * 100));
+
+    return {
+      success: true,
+      processed: clubsToProcess.length,
+      fixed: fixedCount,
+      total: allClubIds.length,
+      hasMore,
+      nextOffset,
+      progress,
+      message: `Lote processado: ${fixedCount} clubes corrigidos de ${clubsToProcess.length} processados. Progresso: ${progress}%${hasMore ? ' (continuar...)' : ' (concluído!)'}`
+    };
   },
 });
 
@@ -963,6 +1009,12 @@ export const createClub = mutation({
       throw new Error("Apenas administradores podem executar esta operação");
     }
 
+    // Buscar critérios
+    const criteria = await ctx.runQuery(api.scoring.getScoringCriteria, {});
+    if (!criteria) {
+      throw new Error("Critérios de pontuação não encontrados");
+    }
+
     // Verificar se já existe um clube com o mesmo nome
     const existingClub = await ctx.db
       .query("clubs")
@@ -975,85 +1027,9 @@ export const createClub = mutation({
 
     // Sistema de DEDUÇÃO: clubes começam com pontuação máxima (1910 pts)
     // Scores zerados = sem penalidades = 1910 pontos
-    const initialScores = {
-      prerequisites: {
-        directorPresence: 0,
-      },
-      campground: {
-        portal: 0,
-        clothesline: 0,
-        pioneers: 0,
-        campfireArea: 0,
-        materials: 0,
-        tentOrganization: 0,
-        security: 0,
-        readyCamp: 0,
-        chairsOrBench: 0,
-      },
-      kitchen: {
-        tentSetup: 0,
-        identification: 0,
-        tentSize: 0,
-        gasRegister: 0,
-        firePosition: 0,
-        refrigerator: 0,
-        tables: 0,
-        extinguisher: 0,
-        menu: 0,
-        menuDisplay: 0,
-        containers: 0,
-        uniform: 0,
-        handSanitizer: 0,
-        washBasin: 0,
-        cleaning: 0,
-        water: 0,
-        identification2: 0,
-      },
-      participation: {
-        opening: 0,
-        saturdayMorning: 0,
-        saturdayEvening: 0,
-        sundayMorning: 0,
-        saturdayAfternoon: 0,
-        sundayEvening: 0,
-        directorMeetingFriday: 0,
-        directorMeetingSaturday: 0,
-      },
-      uniform: {
-        programmedUniform: 0,
-        badges: 0,
-      },
-      secretary: {
-        firstAidKit: 0,
-        secretaryFolder: 0,
-        healthFolder: 0,
-      },
-      events: {
-        carousel: 0,
-        extraActivities: 0,
-        representative: 0,
-      },
-      bonus: {
-        pastorVisit: 0,
-        healthProfessional: 0,
-      },
-      demerits: {
-        noIdentification: 0,
-        unaccompanied: 0,
-        inappropriate: 0,
-        campingActivity: 0,
-        interference: 0,
-        improperClothing: 0,
-        disrespect: 0,
-        improperBehavior: 0,
-        substances: 0,
-        sexOpposite: 0,
-        artificialFires: 0,
-        unauthorizedVehicles: 0,
-      },
-    };
+    const initialScores = createInitialScoreStructure(criteria);
 
-    const totalScore = calculateTotalScore(initialScores);
+    const totalScore = calculateTotalScore(initialScores, criteria, new Set());
     const classification = getClassification(totalScore);
 
     // Criar o clube

@@ -98,6 +98,14 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     setLockedCriteria(new Set());
   };
 
+  // ATUALIZAR scores em tempo real quando selectedClubData mudar
+  useEffect(() => {
+    if (selectedClubData && selectedClub) {
+      console.log("🔄 Dados do clube atualizados, sincronizando scores...", selectedClubData.scores);
+      setScores(createCompleteScoresStructure(selectedClubData.scores, scoringCriteria));
+    }
+  }, [selectedClubData, scoringCriteria]);
+
   // Effect para atualizar lockedCriteria quando os dados carregarem
   useEffect(() => {
     if (lockedCriteriaData && lockedCriteriaData.length > 0) {
@@ -209,44 +217,40 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     }
   };
 
-  // FUNÇÃO PARA BUSCAR PONTUAÇÃO REAL DOS ACTIVITY LOGS
-  const getActualScoreFromLogs = (category: string, subcategory: string, logs?: any[]): number => {
-    const logsToUse = logs || activityLogs;
-    if (!logsToUse || logsToUse.length === 0) return 0;
-    
-    // Buscar o último log que corresponde a essa categoria e subcategoria
-    const relevantLogs = logsToUse.filter((log: any) => 
-      log.scoreChange && 
-      log.scoreChange.category === category && 
-      log.scoreChange.subcategory === subcategory
-    );
-    
-    if (relevantLogs.length === 0) return 0;
-    
-    // Pegar o log mais recente (último do array, pois está ordenado por timestamp)
-    const latestLog = relevantLogs[relevantLogs.length - 1];
-    return latestLog.scoreChange.newValue || 0;
-  };
-
-  // Função para calcular pontuação total de um clube da LISTA (IGUAL AO ADMINDASHBOARD)
-  // SISTEMA SUBTRATIVO: Clubes iniciam com 1910 pontos e PERDEM pontos APENAS por critérios AVALIADOS
-  const calculateClubTotalScore = (clubScores: any): number => {
-    if (!clubScores || !scoringCriteria) {
-      console.log('⚠️ calculateClubTotalScore: sem scores ou critérios', { clubScores: !!clubScores, scoringCriteria: !!scoringCriteria });
-      return 1910; // Pontuação máxima inicial
+  // Função para calcular pontuação total usando lógica SUBTRATIVA SIMPLES
+  // REGRA: penalty = maxPoints - earnedPoints (para TODOS os critérios avaliados)
+  const calculateClubTotalScore = (clubScores: any, clubId?: string): number => {
+    if (!scoringCriteria) {
+      console.log('⚠️ calculateClubTotalScore: sem critérios');
+      return 1910;
     }
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades APENAS para critérios que foram AVALIADOS
+    // Buscar logs para saber quais critérios foram avaliados
+    const clubLogs = activityLogs?.filter((log: any) => log.clubId === clubId) || [];
+    const evaluatedCriteria = new Set<string>();
+    clubLogs.forEach((log: any) => {
+      if (log.scoreChange) {
+        const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+        evaluatedCriteria.add(key);
+      }
+    });
+
+    if (!clubScores) {
+      console.log('⚠️ calculateClubTotalScore: sem scores, retornando máximo');
+      return MAX_SCORE;
+    }
+
+    // Calcular penalidades: penalty = max - earned
     Object.keys(clubScores).forEach(category => {
       if (!scoringCriteria[category]) return;
       const categoryScores = clubScores[category];
       if (typeof categoryScores !== 'object') return;
 
-      // DEMÉRITOS: São valores negativos, somar diretamente
+      // DEMÉRITOS
       if (category === 'demerits') {
         Object.keys(categoryScores).forEach(key => {
           const demeritValue = categoryScores[key];
@@ -257,81 +261,55 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
         return;
       }
 
-      // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS (não-zero ou já foram tocados)
+      // OUTRAS CATEGORIAS
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
         
-        // Ignorar objetos aninhados (como carousel) - processar separadamente
+        // Processar objetos aninhados (carousel)
         if (typeof earnedPoints !== 'number') {
           if (typeof earnedPoints === 'object' && key === 'carousel') {
-            // Processar carousel
             Object.keys(earnedPoints).forEach(carouselKey => {
               const carouselEarned = earnedPoints[carouselKey];
-              
-              // IMPORTANTE: Se é 0, verificar se foi AVALIADO (tem log) ou se nunca foi tocado
-              // Por padrão, assumir que 0 = não avaliado ainda, então NÃO aplicar penalidade
-              // Só aplicar penalidade se houver evidência de avaliação
               if (typeof carouselEarned !== 'number') return;
-              if (carouselEarned === 0) return; // NÃO penalizar se não foi avaliado (0 = não tocado)
+              
+              // Verificar se foi avaliado
+              const criteriaKey = `${category}_carousel.${carouselKey}`;
+              if (!evaluatedCriteria.has(criteriaKey)) return;
               
               const carouselCriterion = scoringCriteria[category]?.[key]?.[carouselKey];
               if (!carouselCriterion) return;
               
               const maxPoints = carouselCriterion.max || 0;
-              const partialPoints = carouselCriterion.partial || 0;
-              
-              let penalty = 0;
-              if (carouselEarned === maxPoints) {
-                penalty = 0; // Ganhou tudo, não perde nada
-              } else if (carouselEarned === partialPoints && partialPoints > 0) {
-                penalty = maxPoints - partialPoints; // Ganhou parcial, perde a diferença
-              } else {
-                penalty = maxPoints - carouselEarned; // Ganhou algo customizado
-              }
-              totalPenalty += penalty;
+              const penalty = maxPoints - carouselEarned; // LÓGICA SIMPLES
+              totalPenalty += Math.max(0, penalty);
             });
           }
           return;
         }
 
-        // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
-        // Não aplicar penalidade para critérios não avaliados!
-        if (earnedPoints === 0) {
-          // Verificar se este critério tem log de avaliação
-          // Se não tem, não penalizar (ainda não foi avaliado)
-          return; // NÃO PENALIZAR critérios não avaliados
-        }
+        // Verificar se foi avaliado
+        const criteriaKey = `${category}_${key}`;
+        if (!evaluatedCriteria.has(criteriaKey)) return;
 
         const criterion = scoringCriteria[category]?.[key];
         if (!criterion) return;
 
         const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
-
-        // Calcular penalidade APENAS para critérios AVALIADOS (valor diferente de 0)
-        let penalty = 0;
-        if (earnedPoints === maxPoints) {
-          penalty = 0; // Ganhou pontuação máxima → Não perde nada
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          penalty = maxPoints - partialPoints; // Ganhou parcial → Perde a diferença
-        } else {
-          penalty = maxPoints - earnedPoints; // Ganhou algo customizado
-        }
-        totalPenalty += penalty;
+        const penalty = maxPoints - earnedPoints; // LÓGICA SIMPLES: max - earned
+        totalPenalty += Math.max(0, penalty);
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais (APENAS critérios avaliados) - Deméritos
     const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
-    console.log(`📊 Staff calculateClubTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
+    console.log(`📊 Staff Score: Clube=${clubId?.slice(-4)}, Avaliados=${evaluatedCriteria.size}, Penalidade=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
     return finalScore;
   };
 
   // Função para calcular pontuação total do clube selecionado (IGUAL AO ADMINDASHBOARD)
   // Usa os scores salvos no banco quando disponível
-  const calculateTotalScore = (clubScores: any) => {
+  const calculateTotalScore = (clubScores: any, clubId?: string) => {
     // Usar a mesma função para consistência
-    return calculateClubTotalScore(clubScores);
+    return calculateClubTotalScore(clubScores, clubId || selectedClub?._id);
   };
 
   // Função para calcular classificação
@@ -444,7 +422,8 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                   {Object.entries(criteria).map(([key, item]: [string, any]) => {
                     console.log(`Rendering criterion: category=${category}, key=${key}, item=`, item);
                     
-                    const currentValue = getActualScoreFromLogs(category, key);
+                    // BUSCAR VALOR DO BANCO DE DADOS (selectedClubData.scores)
+                    const currentValue = selectedClubData?.scores?.[category]?.[key] || scores[category]?.[key] || 0;
                     const maxValue = item.max || 0;
                     const partialValue = item.partial || 0;
                     const isLocked = isCriteriaLocked(category, key);
@@ -628,7 +607,9 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                 hasScores: !!club.scores,
                 scoringCriteria: !!scoringCriteria
               });
-              const totalScore = calculateClubTotalScore(club.scores);
+              
+              // LER DO BANCO (valores já calculados)
+              const totalScore = club.totalScore || 1910;
               const classification = getClassification(totalScore);
               console.log(`📊 StaffDashboard - Resultado: ${club.name} = ${totalScore} pts (${classification.name})`);
 
@@ -712,7 +693,8 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                 {filteredClubs.length} {filteredClubs.length === 1 ? 'resultado' : 'resultados'}
               </h4>
               {filteredClubs.map((club: any) => {
-                const totalScore = calculateTotalScore(club.scores);
+                // LER DO BANCO
+                const totalScore = club.totalScore || 1910;
                 const classification = getClassification(totalScore);
                 
                 return (

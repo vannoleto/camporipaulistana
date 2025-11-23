@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Sistema Campori Paulistana 2025: DEDUÇÃO de pontos a partir de 1910 pontos máximos
@@ -12,66 +12,122 @@ function getClassification(totalScore: number): string {
   return "APRENDIZ";
 }
 
-// Função para calcular pontuação total (Sistema de DEDUÇÃO)
-function calculateTotalScore(scores: any): number {
-  if (!scores) return 1910; // Pontuação máxima inicial
+// CRITÉRIOS DE PONTUAÇÃO (hard-coded para evitar dependência circular)
+const SCORING_CRITERIA = {
+  prerequisites: {
+    photos: { max: 100, partial: 50 },
+    directorPresence: { max: 100, partial: 0 }
+  },
+  participation: {
+    opening: { max: 80, partial: 40 },
+    saturdayMorning: { max: 80, partial: 40 },
+    saturdayNight: { max: 80, partial: 40 },
+    saturdayMeeting: { max: 80, partial: 40 },
+    sundayMeeting: { max: 80, partial: 40 }
+  },
+  general: {
+    firstAidKit: { max: 80, partial: 40 },
+    secretaryFolder: { max: 80, partial: 40 },
+    doorIdentification: { max: 80, partial: 40 },
+    badges: { max: 80, partial: 40 },
+    uniform: { max: 80, partial: 40 }
+  },
+  events: {
+    twelveHour: { max: 160, partial: 80 },
+    carousel: {
+      abel: { max: 160, partial: 80 },
+      jacob: { max: 160, partial: 80 },
+      samson: { max: 160, partial: 80 },
+      rahab: { max: 160, partial: 80 },
+      gideon: { max: 160, partial: 80 },
+      barak: { max: 160, partial: 80 }
+    }
+  },
+  bonus: {
+    pastorVisit: { max: 50, partial: 0 },
+    adultVolunteer: { max: 50, partial: 0 },
+    healthProfessional: { max: 50, partial: 0 }
+  },
+  demerits: {}
+};
+
+// Função para calcular pontuação total (LÓGICA SIMPLIFICADA: penalty = max - earned)
+async function calculateTotalScore(ctx: any, clubId: Id<"clubs">, scores: any): Promise<number> {
+  if (!scores) return 1910;
 
   const MAX_SCORE = 1910;
-  let penalties = 0;
+  let totalPenalty = 0;
+  let demeritsPenalty = 0;
 
-  // Calcular penalidades (pontos PERDIDOS) em cada categoria
-  if (scores.prerequisites) {
-    penalties += Math.abs(scores.prerequisites.photos || 0);
-    penalties += Math.abs(scores.prerequisites.directorPresence || 0);
-  }
-  
-  if (scores.participation) {
-    penalties += Math.abs(scores.participation.opening || 0);
-    penalties += Math.abs(scores.participation.saturdayMorning || 0);
-    penalties += Math.abs(scores.participation.saturdayNight || 0);
-    penalties += Math.abs(scores.participation.saturdayMeeting || 0);
-    penalties += Math.abs(scores.participation.sundayMeeting || 0);
-  }
-  
-  if (scores.general) {
-    penalties += Math.abs(scores.general.firstAidKit || 0);
-    penalties += Math.abs(scores.general.secretaryFolder || 0);
-    penalties += Math.abs(scores.general.doorIdentification || 0);
-    penalties += Math.abs(scores.general.badges || 0);
-    penalties += Math.abs(scores.general.uniform || 0);
-  }
-  
-  if (scores.events) {
-    penalties += Math.abs(scores.events.twelveHour || 0);
-    if (scores.events.carousel) {
-      penalties += Math.abs(scores.events.carousel.abel || 0);
-      penalties += Math.abs(scores.events.carousel.jacob || 0);
-      penalties += Math.abs(scores.events.carousel.samson || 0);
-      penalties += Math.abs(scores.events.carousel.rahab || 0);
-      penalties += Math.abs(scores.events.carousel.gideon || 0);
-      penalties += Math.abs(scores.events.carousel.barak || 0);
+  // Buscar logs para saber o que foi avaliado
+  const activityLogs = await ctx.db
+    .query("activityLogs")
+    .filter((q: any) => q.eq(q.field("clubId"), clubId))
+    .collect();
+
+  const evaluatedCriteria = new Set<string>();
+  activityLogs.forEach((log: any) => {
+    if (log.scoreChange) {
+      const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+      evaluatedCriteria.add(key);
     }
-  }
-  
-  if (scores.bonus) {
-    penalties += Math.abs(scores.bonus.pastorVisit || 0);
-    penalties += Math.abs(scores.bonus.adultVolunteer || 0);
-    penalties += Math.abs(scores.bonus.healthProfessional || 0);
-  }
-  
-  if (scores.demerits) {
-    penalties += Math.abs(scores.demerits.driverIssues || 0);
-    penalties += Math.abs(scores.demerits.lackReverence || 0);
-    penalties += Math.abs(scores.demerits.noBadge || 0);
-    penalties += Math.abs(scores.demerits.unaccompaniedChild || 0);
-    penalties += Math.abs(scores.demerits.unauthorizedVisits || 0);
-    penalties += Math.abs(scores.demerits.vandalism || 0);
-    penalties += Math.abs(scores.demerits.silenceViolation || 0);
-    penalties += Math.abs(scores.demerits.disrespect || 0);
-  }
-  
-  // Pontuação final = Máximo (1910) - Penalidades
-  return Math.max(0, MAX_SCORE - penalties);
+  });
+
+  // Processar categorias
+  Object.keys(scores).forEach(category => {
+    if (!SCORING_CRITERIA[category as keyof typeof SCORING_CRITERIA]) return;
+    const categoryScores = scores[category];
+    if (typeof categoryScores !== 'object') return;
+
+    // DEMÉRITOS
+    if (category === 'demerits') {
+      Object.keys(categoryScores).forEach(key => {
+        const demeritValue = categoryScores[key];
+        if (typeof demeritValue === 'number' && demeritValue !== 0) {
+          demeritsPenalty += Math.abs(demeritValue);
+        }
+      });
+      return;
+    }
+
+    // OUTRAS CATEGORIAS
+    Object.keys(categoryScores).forEach(key => {
+      const earnedPoints = categoryScores[key];
+      
+      // Processar objetos aninhados (carousel)
+      if (typeof earnedPoints !== 'number') {
+        if (typeof earnedPoints === 'object') {
+          Object.keys(earnedPoints).forEach(subKey => {
+            const subValue = earnedPoints[subKey];
+            if (typeof subValue !== 'number') return;
+            
+            const criteriaKey = `${category}_${key}.${subKey}`;
+            if (!evaluatedCriteria.has(criteriaKey)) return;
+            
+            const subCriterion = (SCORING_CRITERIA as any)[category]?.[key]?.[subKey];
+            if (!subCriterion) return;
+            
+            const maxPoints = subCriterion.max || 0;
+            const penalty = maxPoints - subValue;
+            totalPenalty += Math.max(0, penalty);
+          });
+        }
+        return;
+      }
+
+      const criteriaKey = `${category}_${key}`;
+      if (!evaluatedCriteria.has(criteriaKey)) return;
+
+      const criterion = (SCORING_CRITERIA as any)[category]?.[key];
+      if (!criterion) return;
+
+      const maxPoints = criterion.max || 0;
+      const penalty = maxPoints - earnedPoints;
+      totalPenalty += Math.max(0, penalty);
+    });
+  });
+
+  return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
 }
 
 // Reclassificar todos os clubes baseado na pontuação atual
@@ -90,7 +146,7 @@ export const reclassifyAllClubs = mutation({
       // Recalcular pontuação total se houver scores
       let newTotalScore = club.totalScore;
       if (club.scores) {
-        newTotalScore = calculateTotalScore(club.scores);
+        newTotalScore = await calculateTotalScore(ctx, club._id, club.scores);
       }
       
       // Calcular nova classificação
@@ -143,7 +199,7 @@ export const fixClubClassification = mutation({
     // Recalcular pontuação total se houver scores
     let newTotalScore = club.totalScore;
     if (club.scores) {
-      newTotalScore = calculateTotalScore(club.scores);
+      newTotalScore = await calculateTotalScore(ctx, args.clubId, club.scores);
     }
     
     // Calcular nova classificação
@@ -245,7 +301,7 @@ export const fixInitialClassifications = mutation({
     // Corrigir clubes que ainda estão com o sistema antigo (3050 pts, classificação HEROI)
     for (const club of clubs) {
       // Recalcular pontuação baseada nos scores atuais
-      const newTotalScore = calculateTotalScore(club.scores);
+      const newTotalScore = await calculateTotalScore(ctx, club._id, club.scores);
       const newClassification = getClassification(newTotalScore);
       
       // Atualizar se necessário

@@ -257,97 +257,81 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
 
   // Função para calcular pontuação total baseada na estrutura de pontuações (IGUAL AO ADMINDASHBOARD E STAFFDASHBOARD)
   // SISTEMA SUBTRATIVO: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios AVALIADOS
+  // LÓGICA SIMPLIFICADA: penalty = maxPoints - earnedPoints
   const calculateTotalScore = (scores: any) => {
-    if (!scores || !scoringCriteria) return 1910; // Pontuação máxima inicial
+    if (!scores || !scoringCriteria) return 1910;
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades APENAS para critérios que foram AVALIADOS (valor diferente de 0)
-    Object.keys(scores).forEach(category => {
-      if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
+    // Construir Set de critérios avaliados a partir dos logs
+    const clubLogs = activityLogs || [];
+    const evaluatedCriteria = new Set<string>();
+    clubLogs.forEach((log: any) => {
+      if (log.scoreChange) {
+        const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+        evaluatedCriteria.add(key);
+      }
+    });
 
+    Object.keys(scores).forEach(category => {
+      if (!scoringCriteria[category]) return;
       const categoryScores = scores[category];
       if (typeof categoryScores !== 'object') return;
 
-      // DEMÉRITOS: São valores negativos, somar diretamente
+      // DEMÉRITOS
       if (category === 'demerits') {
         Object.keys(categoryScores).forEach(key => {
           const demeritValue = categoryScores[key];
           if (typeof demeritValue === 'number' && demeritValue !== 0) {
-            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+            demeritsPenalty += Math.abs(demeritValue);
           }
         });
         return;
       }
 
-      // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
+      // OUTRAS CATEGORIAS
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
         
-        // Ignorar objetos aninhados - serão processados recursivamente
+        // Processar objetos aninhados (carousel)
         if (typeof earnedPoints !== 'number') {
-          // Processar carousel ou outros objetos aninhados
           if (typeof earnedPoints === 'object') {
             Object.keys(earnedPoints).forEach(subKey => {
               const subValue = earnedPoints[subKey];
               if (typeof subValue !== 'number') return;
               
-              // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
-              if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+              // Verificar se foi avaliado
+              const criteriaKey = `${category}_${key}.${subKey}`;
+              if (!evaluatedCriteria.has(criteriaKey)) return;
               
               const subCriterion = scoringCriteria[category]?.[key]?.[subKey];
               if (!subCriterion) return;
               
               const maxPoints = subCriterion.max || 0;
-              const partialPoints = subCriterion.partial || 0;
-              
-              let penalty = 0;
-              if (subValue === maxPoints) {
-                penalty = 0;
-              } else if (subValue === partialPoints && partialPoints > 0) {
-                penalty = maxPoints - partialPoints;
-              } else {
-                penalty = maxPoints - subValue;
-              }
-              totalPenalty += penalty;
+              const penalty = maxPoints - subValue;
+              totalPenalty += Math.max(0, penalty);
             });
           }
           return;
         }
 
-        // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
-        // Não aplicar penalidade para critérios não avaliados!
-        if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
+        // Verificar se foi avaliado
+        const criteriaKey = `${category}_${key}`;
+        if (!evaluatedCriteria.has(criteriaKey)) return;
 
         const criterion = scoringCriteria[category]?.[key];
-        if (!criterion) return; // Ignorar critérios não definidos
+        if (!criterion) return;
 
         const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
-
-        // Calcular penalidade baseado no que foi conquistado
-        let penalty = 0;
-
-        if (earnedPoints === maxPoints) {
-          // Ganhou pontuação máxima → Não perde nada
-          penalty = 0;
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
-          penalty = maxPoints - partialPoints;
-        } else {
-          // Caso customizado: perde a diferença entre max e o que ganhou
-          penalty = maxPoints - earnedPoints;
-        }
-
-        totalPenalty += penalty;
+        const penalty = maxPoints - earnedPoints;
+        totalPenalty += Math.max(0, penalty);
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
     const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
-    console.log(`📊 Director calculateTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
+    console.log(`📊 Director: Avaliados=${evaluatedCriteria.size}, Penalidade=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
     return finalScore;
   };
 
@@ -938,24 +922,6 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     );
   };
 
-  // FUNÇÃO PARA BUSCAR PONTUAÇÃO REAL DOS ACTIVITY LOGS
-  const getActualScoreFromLogs = (category: string, subcategory: string): number => {
-    if (!activityLogs || activityLogs.length === 0) return 0;
-    
-    // Buscar o último log que corresponde a essa categoria e subcategoria
-    const relevantLogs = activityLogs.filter((log: any) => 
-      log.scoreChange && 
-      log.scoreChange.category === category && 
-      log.scoreChange.subcategory === subcategory
-    );
-    
-    if (relevantLogs.length === 0) return 0;
-    
-    // Pegar o log mais recente (último do array, pois está ordenado por timestamp)
-    const latestLog = relevantLogs[relevantLogs.length - 1];
-    return latestLog.scoreChange.newValue || 0;
-  };
-
   const renderScoring = () => {
     if (!userClub || !scoringCriteria) {
       return <div>Carregando...</div>;
@@ -1000,7 +966,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="px-3 py-1 bg-blue-100 border-2 border-blue-500 rounded text-center font-bold text-blue-700">
-                            {getActualScoreFromLogs(category, carouselKey)} pts
+                            {userClub?.scores?.[category]?.[key]?.[carouselKey] || 0} pts
                           </div>
                         </div>
                       </div>
@@ -1010,7 +976,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               );
             }
 
-            const currentValue = getActualScoreFromLogs(category, key);
+            const currentValue = userClub?.scores?.[category]?.[key] || 0;
             return (
               <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex-1">

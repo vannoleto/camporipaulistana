@@ -175,99 +175,86 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const deleteClub = useMutation(api.clubs.deleteClub);
     const createClub = useMutation(api.clubs.createClub);
     
-  // Função para calcular pontuação total baseada na estrutura de pontuações
-  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
-  const calculateTotalScore = (scores: any) => {
-    if (!scores || !scoringCriteria) return 1910; // Pontuação máxima inicial
+  // Função para calcular pontuação total usando lógica SUBTRATIVA SIMPLES
+  // REGRA: penalty = maxPoints - earnedPoints (para TODOS os critérios avaliados)
+  const calculateTotalScore = (scores: any, clubId?: string) => {
+    if (!scoringCriteria) return 1910;
 
     const MAX_SCORE = 1910;
     let totalPenalty = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades APENAS para critérios que foram AVALIADOS (valor diferente de 0)
+    // Buscar logs para saber quais critérios foram avaliados
+    const clubLogs = activityLogs?.filter((log: any) => log.clubId === clubId) || [];
+    const evaluatedCriteria = new Set<string>();
+    clubLogs.forEach((log: any) => {
+      if (log.scoreChange) {
+        const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+        evaluatedCriteria.add(key);
+      }
+    });
+
+    if (!scores) return MAX_SCORE;
+
+    // Calcular penalidades: penalty = max - earned
     Object.keys(scores).forEach(category => {
-      if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
+      if (!scoringCriteria[category]) return;
 
       const categoryScores = scores[category];
       if (typeof categoryScores !== 'object') return;
 
-      // DEMÉRITOS: São valores negativos, somar diretamente
+      // DEMÉRITOS
       if (category === 'demerits') {
         Object.keys(categoryScores).forEach(key => {
           const demeritValue = categoryScores[key];
           if (typeof demeritValue === 'number' && demeritValue !== 0) {
-            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+            demeritsPenalty += Math.abs(demeritValue);
           }
         });
         return;
       }
 
-      // OUTRAS CATEGORIAS: Sistema de penalidade APENAS para critérios AVALIADOS
+      // OUTRAS CATEGORIAS
       Object.keys(categoryScores).forEach(key => {
         const earnedPoints = categoryScores[key];
         
-        // Ignorar objetos aninhados - serão processados recursivamente
+        // Processar objetos aninhados (carousel)
         if (typeof earnedPoints !== 'number') {
-          // Processar carousel ou outros objetos aninhados
           if (typeof earnedPoints === 'object') {
             Object.keys(earnedPoints).forEach(subKey => {
               const subValue = earnedPoints[subKey];
               if (typeof subValue !== 'number') return;
               
-              // IMPORTANTE: Se é 0, assumir que NÃO foi avaliado ainda
-              if (subValue === 0) return; // NÃO PENALIZAR critérios não avaliados
+              // Verificar se foi avaliado
+              const criteriaKey = `${category}_${key}.${subKey}`;
+              if (!evaluatedCriteria.has(criteriaKey)) return;
               
               const subCriterion = scoringCriteria[category]?.[key]?.[subKey];
               if (!subCriterion) return;
               
               const maxPoints = subCriterion.max || 0;
-              const partialPoints = subCriterion.partial || 0;
-              
-              let penalty = 0;
-              if (subValue === maxPoints) {
-                penalty = 0;
-              } else if (subValue === partialPoints && partialPoints > 0) {
-                penalty = maxPoints - partialPoints;
-              } else {
-                penalty = maxPoints - subValue;
-              }
-              totalPenalty += penalty;
+              const penalty = maxPoints - subValue; // LÓGICA SIMPLES
+              totalPenalty += Math.max(0, penalty);
             });
           }
           return;
         }
 
-        // IMPORTANTE: Se o valor é 0, assumir que NÃO foi avaliado ainda
-        // Não aplicar penalidade para critérios não avaliados!
-        if (earnedPoints === 0) return; // NÃO PENALIZAR critérios não avaliados
+        // Verificar se foi avaliado
+        const criteriaKey = `${category}_${key}`;
+        if (!evaluatedCriteria.has(criteriaKey)) return;
 
         const criterion = scoringCriteria[category]?.[key];
-        if (!criterion) return; // Ignorar critérios não definidos
+        if (!criterion) return;
 
         const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
-
-        // Calcular penalidade baseado no que foi conquistado
-        let penalty = 0;
-
-        if (earnedPoints === maxPoints) {
-          // Ganhou pontuação máxima → Não perde nada
-          penalty = 0;
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
-          penalty = maxPoints - partialPoints;
-        } else {
-          // Caso customizado: perde a diferença entre max e o que ganhou
-          penalty = maxPoints - earnedPoints;
-        }
-
-        totalPenalty += penalty;
+        const penalty = maxPoints - earnedPoints; // LÓGICA SIMPLES: max - earned
+        totalPenalty += Math.max(0, penalty);
       });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais (APENAS avaliados) - Deméritos
     const finalScore = Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
-    console.log(`📊 Admin calculateTotalScore: Penalidade Total=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
+    console.log(`📊 Admin Score: Clube=${clubId?.slice(-4)}, Avaliados=${evaluatedCriteria.size}, Penalidade=${totalPenalty}, Deméritos=${demeritsPenalty}, Final=${finalScore}`);
     return finalScore;
   };
 
@@ -313,8 +300,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
           bonus: { pastorVisit: 100, healthProfessional: 100 },
           demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 }
         };
-        const calculatedScore = calculateTotalScore(clubScores);
-        const calculatedClassification = getClassification(calculatedScore);
+        
+        // LER DO BANCO (valores já calculados pelo backend)
+        const calculatedScore = club.totalScore || 1910;
+        const calculatedClassification = club.classification || getClassification(calculatedScore);
         
         stats[club.region].totalScore += calculatedScore;
         stats[club.region].classifications[calculatedClassification]++;
@@ -870,8 +859,32 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
   const handleFixClubScores = async () => {
     try {
-      const result = await fixClubScores({ adminId: user._id });
-      toast.success(result);
+      let offset = 0;
+      let hasMore = true;
+      let totalProcessed = 0;
+      let totalFixed = 0;
+
+      while (hasMore) {
+        const result = await fixClubScores({ 
+          adminId: user._id,
+          batchSize: 3, // 3 clubes por vez
+          offset
+        });
+
+        totalProcessed += result.processed;
+        totalFixed += result.fixed;
+        hasMore = result.hasMore;
+        offset = result.nextOffset;
+
+        toast.success(`${result.message}`, { duration: 2000 });
+
+        if (hasMore) {
+          // Delay entre lotes
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      toast.success(`🎉 Correção concluída! ${totalFixed} clubes corrigidos de ${totalProcessed} processados.`, { duration: 5000 });
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -1383,7 +1396,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
             }
           };
           
-          const totalScore = calculateTotalScore(currentScores);
+          const totalScore = calculateTotalScore(currentScores, club._id);
           
           return (
           <div
@@ -1484,7 +1497,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     };
 
     const currentScores = editingScores;
-    const totalScore = calculateTotalScore(currentScores);
+    const totalScore = calculateTotalScore(currentScores, selectedClub._id);
     const classification = getClassification(totalScore);
 
     const renderScoreSection = (title: any, category: string, data: any, scores: any, isDemerits = false) => (
@@ -2183,30 +2196,20 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Pontuação:</span>
                   <span className="font-medium text-gray-900">
-                    {(() => {
-                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                      return calculateTotalScore(clubScores).toLocaleString();
-                    })()} pts
+                    {(club.totalScore || 1910).toLocaleString()} pts
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Classificação:</span>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    (() => {
-                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                      const calc = getClassification(calculateTotalScore(clubScores));
-                      return calc === "MISSIONÁRIO" 
-                      ? "bg-yellow-100 text-yellow-800"
-                      : calc === "VOLUNTÁRIO"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-orange-100 text-orange-800";
-                    })()
+                    club.classification === "MISSIONÁRIO" 
+                    ? "bg-yellow-100 text-yellow-800"
+                    : club.classification === "VOLUNTÁRIO"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-orange-100 text-orange-800"
                   }`}>
-                    {(() => {
-                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                      return getClassification(calculateTotalScore(clubScores));
-                    })()}
+                    {club.classification || "APRENDIZ"}
                   </span>
                 </div>
                 
@@ -3001,27 +3004,17 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                     <td className="px-6 py-4 whitespace-nowrap">{club.region}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{club.membersCount || 0}</td>
                     <td className="px-6 py-4 whitespace-nowrap font-bold">
-                      {(() => {
-                        const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                        return calculateTotalScore(clubScores).toLocaleString();
-                      })()} pts
+                      {(club.totalScore || 1910).toLocaleString()} pts
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        (() => {
-                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                          const calc = getClassification(calculateTotalScore(clubScores));
-                          return calc === "MISSIONÁRIO" 
-                          ? "bg-yellow-100 text-yellow-800"
-                          : calc === "VOLUNTÁRIO"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-orange-100 text-orange-800";
-                        })()
+                        club.classification === "MISSIONÁRIO" 
+                        ? "bg-yellow-100 text-yellow-800"
+                        : club.classification === "VOLUNTÁRIO"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-orange-100 text-orange-800"
                       }`}>
-                        {(() => {
-                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                          return getClassification(calculateTotalScore(clubScores));
-                        })()}
+                        {club.classification || "APRENDIZ"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -3373,21 +3366,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
                     <div className="text-right">
                       <div className="text-2xl font-bold text-gray-900">
-                        {(() => {
-                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                          return calculateTotalScore(clubScores).toLocaleString();
-                        })()} pts
+                        {(club.totalScore || 1910).toLocaleString()} pts
                       </div>
                       <div className="flex items-center justify-end space-x-2 mt-1">
-                        {(() => {
-                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
-                          const calc = getClassification(calculateTotalScore(clubScores));
-                          return calc === "MISSIONÁRIO" ? (
+                        {club.classification === "MISSIONÁRIO" ? (
                           <div className="flex items-center text-yellow-600 font-medium">
                             <Crown size={16} className="mr-1" />
                             MISSIONÁRIO
                           </div>
-                        ) : calc === "VOLUNTÁRIO" ? (
+                        ) : club.classification === "VOLUNTÁRIO" ? (
                           <div className="flex items-center text-blue-600 font-medium">
                             <Trophy size={16} className="mr-1" />
                             VOLUNTÁRIO
@@ -3397,8 +3384,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                             <Star size={16} className="mr-1" />
                             APRENDIZ
                           </div>
-                        );
-                        })()}
+                        )}
                       </div>
                     </div>
                   </div>

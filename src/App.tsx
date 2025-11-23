@@ -8,9 +8,13 @@ import { MDADashboard } from "./components/MDADashboard";
 import { StaffDashboard } from "./components/StaffDashboard";
 import { MobileLayout } from "./components/MobileLayout";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import DebugScoring from "./components/DebugScoring";
 
 function App() {
   const [user, setUser] = useState<any>(null);
+
+  // MODO DEBUG - Desativado
+  // return <><DebugScoring /><Toaster /></>;
 
   const handleLogin = (userData: any) => {
     setUser(userData);

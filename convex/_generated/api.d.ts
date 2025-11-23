@@ -17,6 +17,7 @@ import type * as auth from "../auth.js";
 import type * as classification from "../classification.js";
 import type * as clubs from "../clubs.js";
 import type * as clubs_temp from "../clubs_temp.js";
+import type * as debug from "../debug.js";
 import type * as evaluation from "../evaluation.js";
 import type * as files from "../files.js";
 import type * as fixHistoryLogs from "../fixHistoryLogs.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   classification: typeof classification;
   clubs: typeof clubs;
   clubs_temp: typeof clubs_temp;
+  debug: typeof debug;
   evaluation: typeof evaluation;
   files: typeof files;
   fixHistoryLogs: typeof fixHistoryLogs;
