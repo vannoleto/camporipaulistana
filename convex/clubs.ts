@@ -789,7 +789,73 @@ export const updateClubScores = mutation({
       classification: newClassification,
     });
 
-    // Log da avaliação
+    // Gerar log detalhado de avaliação com informações de cada critério
+    const evaluationDetails: string[] = [];
+    let totalPenalty = 0;
+
+    // Mapear nomes das categorias para exibição em português
+    const categoryNames: Record<string, string> = {
+      prerequisites: 'Pré-requisitos',
+      campground: 'Área de Acampamento',
+      kitchen: 'Cozinha',
+      participation: 'Participação',
+      uniform: 'Uniforme',
+      secretary: 'Secretaria',
+      events: 'Eventos/Provas',
+      bonus: 'Bônus',
+      demerits: 'Deméritos'
+    };
+
+    // Processar cada categoria para gerar detalhes
+    Object.keys(mergedScores).forEach(category => {
+      if (!criteria[category]) return;
+      
+      const categoryDisplayName = categoryNames[category] || category;
+      
+      Object.entries(mergedScores[category]).forEach(([key, earnedPoints]: [string, any]) => {
+        if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
+        
+        const criterion = criteria[category]?.[key];
+        if (!criterion) return;
+        
+        const maxPoints = criterion.max || 0;
+        const partialPoints = criterion.partial || 0;
+        
+        // Calcular penalidade
+        let penalty = 0;
+        if (earnedPoints === maxPoints) {
+          penalty = 0;
+        } else if (earnedPoints === partialPoints && partialPoints > 0) {
+          penalty = maxPoints - partialPoints;
+        } else if (earnedPoints === 0) {
+          penalty = maxPoints;
+        } else {
+          penalty = maxPoints - earnedPoints;
+        }
+        
+        totalPenalty += penalty;
+        
+        // Adicionar linha ao log com nome da categoria em português
+        evaluationDetails.push(`📊 Critério: ${categoryDisplayName}.${key} | Ganhou: ${earnedPoints}/${maxPoints} | Penalidade: ${penalty}`);
+      });
+    });
+    
+    // Adicionar linha final com penalidade total e pontuação
+    evaluationDetails.push(`📊 Penalidade Total: ${totalPenalty} | Pontuação Final: ${newTotalScore}`);
+    
+    // Criar log detalhado no sistema
+    await ctx.db.insert("activityLogs", {
+      userId: args.userId,
+      userName: user.name,
+      userRole: user.role,
+      action: "system_evaluation",
+      details: evaluationDetails.join('\n'),
+      timestamp: Date.now(),
+      clubId: args.clubId,
+      clubName: club.name,
+    });
+
+    // Log simples da avaliação (mantido para compatibilidade)
     await ctx.db.insert("activityLogs", {
       userId: args.userId,
       userName: user.name,
@@ -1076,6 +1142,42 @@ export const getAllActivityLogs = query({
         clubId: log.clubId,
         clubName: club?.name || "Clube Desconhecido",
         clubRegion: club?.region || "Região Desconhecida",
+      };
+    });
+  },
+});
+
+// Buscar logs detalhados de avaliação com informações de critérios
+export const getDetailedEvaluationLogs = query({
+  args: {},
+  handler: async (ctx) => {
+    // Buscar logs de system_evaluation (avaliações detalhadas)
+    const logs = await ctx.db
+      .query("activityLogs")
+      .filter((q) => q.eq(q.field("action"), "system_evaluation"))
+      .order("desc")
+      .take(100);
+
+    // Buscar informações dos clubes
+    const clubsMap = new Map();
+    for (const log of logs) {
+      if (log.clubId && !clubsMap.has(log.clubId)) {
+        const club = await ctx.db.get(log.clubId);
+        if (club) {
+          clubsMap.set(log.clubId, club);
+        }
+      }
+    }
+
+    return logs.map(log => {
+      const club = log.clubId ? clubsMap.get(log.clubId) : null;
+      
+      return {
+        _id: log._id,
+        timestamp: log.timestamp || Date.now(),
+        clubName: club?.name || "Clube Desconhecido",
+        clubRegion: club?.region || "Região Desconhecida",
+        details: log.details || "",
       };
     });
   },

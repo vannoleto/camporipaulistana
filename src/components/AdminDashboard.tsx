@@ -80,6 +80,7 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [selectedClubForScoring, setSelectedClubForScoring] = useState<string>("");
+    const [activityLogFilter, setActivityLogFilter] = useState<string>("all");
     
     // Estados para a interface de Pontuação
     const [showScoringModal, setShowScoringModal] = useState(false);
@@ -122,11 +123,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const pendingUsers = useQuery(api.users.listUsers, { approved: false });
     console.log("AdminDashboard: pendingUsers result", { pendingUsers, isUndefined: pendingUsers === undefined });
 
-    // Removendo queries que podem não existir por enquanto
-    // const classificationStats = useQuery(api.clubs.getClassificationStats, {});
-    // const regionStats = useQuery(api.clubs.getRegionStats, {});
-    // const ranking = useQuery(api.clubs.getRanking, { limit: 10 });
-    // const activityLogs = useQuery(api.users.getActivityLogs, {});
+    // Query para logs de atividade de usuários
+    const activityLogs = useQuery(api.users.getActivityLogs, {});
+    
+    // Query para logs detalhados de avaliação
+    const evaluationLogs = useQuery(api.clubs.getDetailedEvaluationLogs, {});
     
     const selectedClubData = useQuery(
       api.clubs.getClubById, 
@@ -254,7 +255,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     // Estatísticas calculadas dinamicamente
     const regionStats = calculateRegionStats();
     const classificationStats = calculateClassificationStats();
-    const activityLogs: any[] = [];
 
   // Função para calcular pontuação total baseada na estrutura de pontuações
   // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
@@ -3900,66 +3900,215 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
         </div>
       </div>
 
-      {/* Seção de Logs de Atividade */}
+      {/* Seção de Logs Detalhados de Avaliação */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-            <History size={20} />
-            Diagnóstico do Sistema
-          </h3>
-          <button
-            onClick={handleShowActivityLogs}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm flex items-center gap-2"
-          >
-            <History size={16} />
-            Ver Logs de Atividade
-          </button>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+              <ClipboardList size={20} />
+              Logs Detalhados de Avaliações
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Histórico completo de todas as avaliações realizadas pelo staff
+            </p>
+          </div>
         </div>
-        
-        {showActivityLogs && (
-          <div className="border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
-            <h4 className="font-semibold mb-3 text-gray-800">Últimos Acessos dos Usuários</h4>
-            {activityLogs && activityLogs.length > 0 ? (
-              <div className="space-y-2">
-                {activityLogs.map((log: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        log.role === 'admin' ? 'bg-red-500' :
-                        log.role === 'regional' ? 'bg-blue-500' :
-                        log.role === 'director' ? 'bg-green-500' :
-                        log.role === 'secretary' ? 'bg-green-400' :
-                        'bg-purple-500'
-                      }`}></div>
-                      <div>
-                        <div className="font-medium text-gray-800">{log.name}</div>
-                        <div className="text-sm text-gray-600 capitalize">
-                          {log.role === 'admin' ? 'Administrador' :
-                           log.role === 'regional' ? 'Regional' :
-                           log.role === 'director' ? 'Diretor' :
-                           log.role === 'secretary' ? 'Secretário' :
-                           'Staff'}
-                          {log.region && ` - ${log.region}`}
-                          {log.clubName && ` - ${log.clubName}`}
+
+        <div className="border border-gray-200 rounded-lg max-h-[500px] overflow-y-auto">
+          {evaluationLogs && evaluationLogs.length > 0 ? (
+            <div className="divide-y divide-gray-200">
+              {evaluationLogs.map((log: any) => {
+                // Processar detalhes do log para melhor formatação
+                const details = log.details.split('\n').filter((line: string) => line.trim());
+                const criteriaLines = details.filter((line: string) => line.includes('📊 Critério:'));
+                const summaryLine = details.find((line: string) => line.includes('📊 Penalidade Total:'));
+                
+                return (
+                  <div key={log._id} className="p-4 hover:bg-gray-50 transition-colors border-l-4 border-purple-500">
+                    {/* Cabeçalho do log */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <UserCheck size={20} className="text-purple-600" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">{log.userName}</span>
+                            <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-medium">
+                              {log.userRole === 'admin' ? '👑 Admin' :
+                               log.userRole === 'regional' ? '🗺️ Regional' :
+                               '⭐ Staff'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-sm">
+                            <span className="text-gray-600">avaliou</span>
+                            <span className="font-semibold text-blue-600">{log.clubName}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="font-semibold text-gray-900">
+                          {new Date(log.timestamp).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-gray-600 font-medium">
+                          {new Date(log.timestamp).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-800">
-                        {new Date(log.lastLoginAt).toLocaleDateString('pt-BR')}
+
+                    {/* Critérios avaliados */}
+                    {criteriaLines.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                          Critérios Avaliados
+                        </h4>
+                        <div className="space-y-1.5">
+                          {criteriaLines.map((line: string, idx: number) => {
+                            // Extrair informações da linha
+                            const match = line.match(/📊 Critério: (.+?) \| Ganhou: (\d+)\/(\d+) \| Penalidade: (\d+)/);
+                            if (!match) return null;
+                            
+                            const [, criterion, earned, max, penalty] = match;
+                            const earnedNum = parseInt(earned);
+                            const maxNum = parseInt(max);
+                            const penaltyNum = parseInt(penalty);
+                            const percentage = maxNum > 0 ? (earnedNum / maxNum) * 100 : 0;
+                            
+                            // Mapear nomes das categorias
+                            const categoryNames: Record<string, string> = {
+                              'prerequisites': 'Pré-requisitos',
+                              'campground': 'Área de Acampamento',
+                              'kitchen': 'Cozinha',
+                              'participation': 'Participação',
+                              'uniform': 'Uniforme',
+                              'secretary': 'Secretaria',
+                              'events': 'Eventos/Provas',
+                              'bonus': 'Bônus',
+                              'demerits': 'Deméritos'
+                            };
+                            
+                            return (
+                              <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium text-gray-700 mb-1.5 break-words">
+                                      {criterion.split('.').map((part: string, i: number) => (
+                                        <span key={i}>
+                                          {i > 0 && <span className="text-gray-400 mx-1">›</span>}
+                                          <span className={i === 0 ? 'text-blue-600 font-semibold' : ''}>
+                                            {i === 0 ? (categoryNames[part] || part) : part.replace(/_/g, ' ')}
+                                          </span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Barra de progresso */}
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                                      <div
+                                        className={`h-1.5 rounded-full transition-all ${
+                                          percentage === 100 ? 'bg-green-500' :
+                                          percentage >= 50 ? 'bg-blue-500' :
+                                          'bg-red-500'
+                                        }`}
+                                        style={{ width: `${percentage}%` }}
+                                      />
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3 text-xs">
+                                      <span className={`font-semibold ${
+                                        earnedNum === maxNum ? 'text-green-600' :
+                                        earnedNum > 0 ? 'text-blue-600' :
+                                        'text-red-600'
+                                      }`}>
+                                        {earnedNum === maxNum ? '✓' : earnedNum > 0 ? '◐' : '✗'} {earned}/{max} pontos
+                                      </span>
+                                      {penaltyNum > 0 && (
+                                        <span className="text-red-600 font-semibold">
+                                          -{penalty} pts penalidade
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Badge de status */}
+                                  <div className="flex-shrink-0">
+                                    {earnedNum === maxNum ? (
+                                      <div className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">
+                                        100%
+                                      </div>
+                                    ) : earnedNum > 0 ? (
+                                      <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">
+                                        {Math.round(percentage)}%
+                                      </div>
+                                    ) : (
+                                      <div className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">
+                                        0%
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(log.lastLoginAt).toLocaleTimeString('pt-BR')}
+                    )}
+
+                    {/* Resumo final */}
+                    {summaryLine && (
+                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border-2 border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                              <Trophy size={20} className="text-white" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-600 font-medium mb-1">RESULTADO FINAL</div>
+                              {(() => {
+                                const match = summaryLine.match(/📊 Penalidade Total: (\d+) \| Pontuação Final: (\d+)/);
+                                if (!match) return null;
+                                const [, totalPenalty, finalScore] = match;
+                                
+                                return (
+                                  <div className="flex items-center gap-4">
+                                    <div>
+                                      <span className="text-xs text-gray-600">Penalidade Total:</span>
+                                      <div className="text-lg font-bold text-red-600">-{totalPenalty} pts</div>
+                                    </div>
+                                    <div className="w-px h-10 bg-gray-300"></div>
+                                    <div>
+                                      <span className="text-xs text-gray-600">Pontuação Final:</span>
+                                      <div className="text-2xl font-bold text-blue-600">{finalScore} pts</div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">Nenhum log de atividade encontrado</p>
-            )}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <ClipboardList size={48} className="mx-auto mb-3 text-gray-400" />
+              <p>Nenhuma avaliação detalhada registrada ainda</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
