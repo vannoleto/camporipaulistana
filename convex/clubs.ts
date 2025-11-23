@@ -553,10 +553,6 @@ export const resetAllClubScores = mutation({
     //   throw new Error("Critérios de pontuação não encontrados. Configure os critérios primeiro.");
     // }
 
-    // Buscar todos os clubes existentes
-    const clubs = await ctx.db.query("clubs").collect();
-    let updatedCount = 0;
-
     // Sistema de DEDUÇÃO: clubes iniciam com 1910 pts (sem penalidades)
     // Valores zerados = pontuação máxima (1910 pontos)
     const maxScores = {
