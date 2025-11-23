@@ -44,6 +44,10 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     api.clubs.getClubById, 
     selectedClub ? { clubId: selectedClub._id } : "skip"
   );
+  const activityLogs = useQuery(
+    api.clubs.getClubActivityLogs,
+    selectedClub ? { clubId: selectedClub._id } : "skip"
+  );
   const lockedCriteriaData = useQuery(
     api.clubs.getLockedCriteria,
     selectedClub ? { clubId: selectedClub._id } : "skip"
@@ -205,23 +209,48 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
     }
   };
 
-  // Função para calcular pontuação total
-  // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios AVALIADOS
-  // Lógica: Se ganhou máximo → perde 0 | Se ganhou parcial → perde (max-parcial) | Se ganhou zero → perde max
-  const calculateTotalScore = (clubScores: any) => {
-    if (!clubScores || !scoringCriteria) return 1910; // Pontuação máxima inicial
+  // FUNÇÃO PARA BUSCAR PONTUAÇÃO REAL DOS ACTIVITY LOGS
+  const getActualScoreFromLogs = (category: string, subcategory: string, logs?: any[]): number => {
+    const logsToUse = logs || activityLogs;
+    if (!logsToUse || logsToUse.length === 0) return 0;
+    
+    // Buscar o último log que corresponde a essa categoria e subcategoria
+    const relevantLogs = logsToUse.filter((log: any) => 
+      log.scoreChange && 
+      log.scoreChange.category === category && 
+      log.scoreChange.subcategory === subcategory
+    );
+    
+    if (relevantLogs.length === 0) return 0;
+    
+    // Pegar o log mais recente (último do array, pois está ordenado por timestamp)
+    const latestLog = relevantLogs[relevantLogs.length - 1];
+    return latestLog.scoreChange.newValue || 0;
+  };
 
-    const MAX_SCORE = 1910;
-    let totalPenalty = 0;
+  // Função para calcular pontuação total usando ACTIVITY LOGS
+  const calculateTotalScoreFromLogs = (clubId: string): number => {
+    if (!scoringCriteria) return 0;
+
+    let totalEarned = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades baseado nos critérios dinâmicos (igual AdminDashboard)
-    Object.keys(clubScores).forEach(category => {
+    // Buscar logs deste clube específico
+    const clubLogs = clubs?.find((c: any) => c._id === clubId);
+    
+    // Se não tiver logs carregados, tentar buscar do activityLogs filtrado
+    if (!clubLogs) return 0;
+
+    // Para calcular na lista, vamos somar os scores salvos no clube mesmo
+    // (que devem ser atualizados pelo backend quando avaliação é salva)
+    const scores = clubLogs.scores;
+    if (!scores) return 0;
+
+    Object.keys(scores).forEach(category => {
       if (!scoringCriteria[category]) return;
-      const categoryScores = clubScores[category];
+      const categoryScores = scores[category];
       if (typeof categoryScores !== 'object') return;
 
-      // DEMÉRITOS: São valores negativos, somar diretamente
       if (category === 'demerits') {
         Object.keys(categoryScores).forEach(key => {
           const demeritValue = categoryScores[key];
@@ -229,36 +258,92 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
             demeritsPenalty += Math.abs(demeritValue);
           }
         });
-        return;
+      } else {
+        Object.keys(categoryScores).forEach(key => {
+          const value = categoryScores[key];
+          if (typeof value === 'number') {
+            totalEarned += value;
+          } else if (typeof value === 'object') {
+            // Carousel ou outros aninhados
+            Object.values(value).forEach((v: any) => {
+              if (typeof v === 'number') {
+                totalEarned += v;
+              }
+            });
+          }
+        });
       }
-
-      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
-      Object.keys(categoryScores).forEach(key => {
-        const earnedPoints = categoryScores[key];
-        if (typeof earnedPoints !== 'number') return;
-
-        const criterion = scoringCriteria[category]?.[key];
-        if (!criterion) return;
-
-        const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
-
-        let penalty = 0;
-        if (earnedPoints === maxPoints) {
-          penalty = 0;
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          penalty = maxPoints - partialPoints;
-        } else if (earnedPoints === 0) {
-          penalty = maxPoints;
-        } else {
-          penalty = maxPoints - earnedPoints;
-        }
-        totalPenalty += penalty;
-      });
     });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
-    return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+    return Math.max(0, totalEarned - demeritsPenalty);
+  };
+
+  // Função para calcular pontuação total do clube selecionado (usa activityLogs)
+  const calculateTotalScore = (clubScores: any) => {
+    if (!scoringCriteria) return 0;
+
+    let totalEarned = 0;
+    let demeritsPenalty = 0;
+
+    // Calcular pontos GANHOS de todas as categorias usando ACTIVITY LOGS
+    if (activityLogs && activityLogs.length > 0) {
+      // Agrupar logs por categoria/subcategoria para pegar o valor mais recente
+      const latestScores: any = {};
+      
+      activityLogs.forEach((log: any) => {
+        if (log.scoreChange) {
+          const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+          if (!latestScores[key] || log.timestamp > latestScores[key].timestamp) {
+            latestScores[key] = {
+              category: log.scoreChange.category,
+              subcategory: log.scoreChange.subcategory,
+              value: log.scoreChange.newValue,
+              timestamp: log.timestamp
+            };
+          }
+        }
+      });
+
+      // Somar todos os pontos ganhos
+      Object.values(latestScores).forEach((score: any) => {
+        if (score.category === 'demerits') {
+          demeritsPenalty += Math.abs(score.value);
+        } else {
+          totalEarned += score.value || 0;
+        }
+      });
+    } else if (clubScores) {
+      // Fallback: usar scores do clube se não houver logs
+      Object.keys(clubScores).forEach(category => {
+        if (!scoringCriteria[category]) return;
+        const categoryScores = clubScores[category];
+        if (typeof categoryScores !== 'object') return;
+
+        if (category === 'demerits') {
+          Object.keys(categoryScores).forEach(key => {
+            const demeritValue = categoryScores[key];
+            if (typeof demeritValue === 'number') {
+              demeritsPenalty += Math.abs(demeritValue);
+            }
+          });
+        } else {
+          Object.keys(categoryScores).forEach(key => {
+            const value = categoryScores[key];
+            if (typeof value === 'number') {
+              totalEarned += value;
+            } else if (typeof value === 'object') {
+              Object.values(value).forEach((v: any) => {
+                if (typeof v === 'number') {
+                  totalEarned += v;
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return Math.max(0, totalEarned - demeritsPenalty);
   };
 
   // Função para calcular classificação
@@ -303,49 +388,8 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
       demerits: <X size={20} />
     };
 
-    // Calcular pontuação total igual ao AdminDashboard (considera todos critérios)
-    // Usar sempre os dados em tempo real do backend para pontuação
-    const totalScore = (() => {
-      const scores = selectedClubData?.scores || selectedClub?.scores;
-      if (!scores || !scoringCriteria) return 1910;
-      const MAX_SCORE = 1910;
-      let totalPenalty = 0;
-      let demeritsPenalty = 0;
-      Object.keys(scores).forEach(category => {
-        if (!scoringCriteria[category]) return;
-        const categoryScores = scores[category];
-        if (typeof categoryScores !== 'object') return;
-        if (category === 'demerits') {
-          Object.keys(categoryScores).forEach(key => {
-            const demeritValue = categoryScores[key];
-            if (typeof demeritValue === 'number') {
-              demeritsPenalty += Math.abs(demeritValue);
-            }
-          });
-          return;
-        }
-        Object.keys(categoryScores).forEach(key => {
-          const earnedPoints = categoryScores[key];
-          if (typeof earnedPoints !== 'number') return;
-          const criterion = scoringCriteria[category]?.[key];
-          if (!criterion) return;
-          const maxPoints = criterion.max || 0;
-          const partialPoints = criterion.partial || 0;
-          let penalty = 0;
-          if (earnedPoints === maxPoints) {
-            penalty = 0;
-          } else if (earnedPoints === partialPoints && partialPoints > 0) {
-            penalty = maxPoints - partialPoints;
-          } else if (earnedPoints === 0) {
-            penalty = maxPoints;
-          } else {
-            penalty = maxPoints - earnedPoints;
-          }
-          totalPenalty += penalty;
-        });
-      });
-      return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
-    })();
+    // Calcular pontuação total usando ACTIVITY LOGS
+    const totalScore = calculateTotalScore(selectedClubData?.scores || selectedClub?.scores);
     const classification = getClassification(totalScore);
 
     return (
@@ -412,12 +456,12 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                   {Object.entries(criteria).map(([key, item]: [string, any]) => {
                     console.log(`Rendering criterion: category=${category}, key=${key}, item=`, item);
                     
-                    const currentValue = scores[category]?.[key] || 0;
+                    const currentValue = getActualScoreFromLogs(category, key);
                     const maxValue = item.max || 0;
                     const partialValue = item.partial || 0;
                     const isLocked = isCriteriaLocked(category, key);
                     
-                    console.log(`Criterion values: max=${maxValue}, partial=${partialValue}, locked=${isLocked}`);
+                    console.log(`Criterion values: max=${maxValue}, partial=${partialValue}, locked=${isLocked}, currentValue=${currentValue}`);
                     
                     return (
                       <div 
@@ -441,7 +485,7 @@ export function StaffDashboard({ user, onLogout }: StaffDashboardProps) {
                               {partialValue > 0 && ` | Parcial: ${partialValue} pts`}
                             </p>
                             {isLocked && (
-                              <p className="text-xs text-green-700 font-semibold mt-1">
+                              <p className="text-xs font-bold mt-1 px-2 py-1 bg-green-100 text-green-700 rounded inline-block">
                                 ✓ Avaliado: {currentValue} pts
                               </p>
                             )}

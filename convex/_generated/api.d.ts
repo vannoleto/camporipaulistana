@@ -19,6 +19,7 @@ import type * as clubs from "../clubs.js";
 import type * as clubs_temp from "../clubs_temp.js";
 import type * as evaluation from "../evaluation.js";
 import type * as files from "../files.js";
+import type * as fixHistoryLogs from "../fixHistoryLogs.js";
 import type * as http from "../http.js";
 import type * as importClubs from "../importClubs.js";
 import type * as router from "../router.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   clubs_temp: typeof clubs_temp;
   evaluation: typeof evaluation;
   files: typeof files;
+  fixHistoryLogs: typeof fixHistoryLogs;
   http: typeof http;
   importClubs: typeof importClubs;
   router: typeof router;

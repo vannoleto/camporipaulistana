@@ -171,91 +171,10 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     const unlockCriteria = useMutation(api.evaluation.unlockCriteria);
     const clearAllCriteriaLocks = useMutation(api.evaluation.clearAllCriteriaLocks);
     const clearAllActivityLogs = useMutation(api.clubs.clearAllActivityLogs);
-    const migrateOldBatchEvaluations = useMutation(api.evaluation.migrateOldBatchEvaluations);
     const importClubsBatch = useMutation(api.clubs.importClubsBatch);
     const deleteClub = useMutation(api.clubs.deleteClub);
     const createClub = useMutation(api.clubs.createClub);
     
-    // Calculando estatísticas dinamicamente
-    const calculateRegionStats = () => {
-      if (!clubs || clubs.length === 0) return {};
-      
-      const stats: any = {};
-      
-      clubs.forEach(club => {
-        if (!club.region) return;
-        
-        if (!stats[club.region]) {
-          stats[club.region] = {
-            total: 0,
-            totalScore: 0,
-            averageScore: 0,
-            classifications: {
-              MISSIONÁRIO: 0,
-              VOLUNTÁRIO: 0,
-              APRENDIZ: 0
-            }
-          };
-        }
-        
-        stats[club.region].total++;
-        stats[club.region].totalScore += club.totalScore || 0;
-        
-        if (club.classification) {
-          stats[club.region].classifications[club.classification]++;
-        } else {
-          // Se não tem classificação, assume APRENDIZ
-          stats[club.region].classifications.APRENDIZ++;
-        }
-      });
-      
-      // Calcular média de pontuação para cada região
-      Object.keys(stats).forEach(region => {
-        if (stats[region].total > 0) {
-          stats[region].averageScore = Math.round(stats[region].totalScore / stats[region].total);
-        }
-      });
-      
-      return stats;
-    };
-
-    const calculateClassificationStats = () => {
-      if (!clubs || clubs.length === 0) return { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
-      
-      const stats = { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
-      
-      clubs.forEach(club => {
-        if (club.classification) {
-          stats[club.classification as keyof typeof stats]++;
-        } else {
-          stats.APRENDIZ++;
-        }
-      });
-      
-      return stats;
-    };
-
-    console.log("AdminDashboard: All queries called, checking loading state...");
-    console.log("AdminDashboard: clubs", { clubs, isUndefined: clubs === undefined });
-    console.log("AdminDashboard: users", { users, isUndefined: users === undefined });
-    console.log("AdminDashboard: scoringCriteria", { scoringCriteria, isUndefined: scoringCriteria === undefined });
-
-    // Verificação de loading - se alguma query principal está ainda carregando
-    if (clubs === undefined || users === undefined || scoringCriteria === undefined) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Carregando painel administrativo...</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Estatísticas calculadas dinamicamente
-    const regionStats = calculateRegionStats();
-    const classificationStats = calculateClassificationStats();
-
   // Função para calcular pontuação total baseada na estrutura de pontuações
   // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
   const calculateTotalScore = (scores: any) => {
@@ -326,8 +245,96 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     if (totalScore >= 1232) return "VOLUNTÁRIO";
     return "APRENDIZ";
   };
+    
+    // Calculando estatísticas dinamicamente
+    const calculateRegionStats = () => {
+      if (!clubs || clubs.length === 0) return {};
+      
+      const stats: any = {};
+      
+      clubs.forEach(club => {
+        if (!club.region) return;
+        
+        if (!stats[club.region]) {
+          stats[club.region] = {
+            total: 0,
+            totalScore: 0,
+            averageScore: 0,
+            classifications: {
+              MISSIONÁRIO: 0,
+              VOLUNTÁRIO: 0,
+              APRENDIZ: 0
+            }
+          };
+        }
+        
+        stats[club.region].total++;
+        
+        // Calcular score em tempo real
+        const clubScores = club.scores || {
+          prerequisites: { directorPresence: 30 },
+          campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 },
+          kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 },
+          participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 },
+          uniform: { programmedUniform: 100, badges: 100 },
+          secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 },
+          events: { carousel: 100, extraActivities: 100, representative: 100 },
+          bonus: { pastorVisit: 100, healthProfessional: 100 },
+          demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 }
+        };
+        const calculatedScore = calculateTotalScore(clubScores);
+        const calculatedClassification = getClassification(calculatedScore);
+        
+        stats[club.region].totalScore += calculatedScore;
+        stats[club.region].classifications[calculatedClassification]++;
+      });
+      
+      // Calcular média de pontuação para cada região
+      Object.keys(stats).forEach(region => {
+        if (stats[region].total > 0) {
+          stats[region].averageScore = Math.round(stats[region].totalScore / stats[region].total);
+        }
+      });
+      
+      return stats;
+    };
 
+    const calculateClassificationStats = () => {
+      if (!clubs || clubs.length === 0) return { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
+      
+      const stats = { MISSIONÁRIO: 0, VOLUNTÁRIO: 0, APRENDIZ: 0 };
+      
+      clubs.forEach(club => {
+        if (club.classification) {
+          stats[club.classification as keyof typeof stats]++;
+        } else {
+          stats.APRENDIZ++;
+        }
+      });
+      
+      return stats;
+    };
 
+    console.log("AdminDashboard: All queries called, checking loading state...");
+    console.log("AdminDashboard: clubs", { clubs, isUndefined: clubs === undefined });
+    console.log("AdminDashboard: users", { users, isUndefined: users === undefined });
+    console.log("AdminDashboard: scoringCriteria", { scoringCriteria, isUndefined: scoringCriteria === undefined });
+
+    // Verificação de loading - se alguma query principal está ainda carregando
+    if (clubs === undefined || users === undefined || scoringCriteria === undefined) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Carregando painel administrativo...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Estatísticas calculadas dinamicamente
+    const regionStats = calculateRegionStats();
+    const classificationStats = calculateClassificationStats();
 
   const updateScore = (category: string, subcategory: string, value: any) => {
     console.log("📝 AdminDashboard.updateScore called:", { category, subcategory, value });
@@ -535,33 +542,35 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
     setSelectedClub(club);
     // Mudar para a aba de avaliação
     setActiveTab("evaluation");
-    // Inicializar com pontuações existentes ou estrutura padrão
+    
+    // CORRIGIDO: Usar pontuação máxima como padrão (igual à lista)
     const currentScores = club.scores || {
-      prerequisites: { directorPresence: 0 },
+      prerequisites: { directorPresence: 30 },
       campground: { 
-        portal: 0, clothesline: 0, pioneers: 0, campfireArea: 0, materials: 0, 
-        tentOrganization: 0, security: 0, readyCamp: 0, chairsOrBench: 0 
+        portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, 
+        tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 
       },
       kitchen: { 
-        tentSetup: 0, identification: 0, tentSize: 0, gasRegister: 0, firePosition: 0, 
-        refrigerator: 0, tables: 0, extinguisher: 0, menu: 0, menuDisplay: 0, 
-        containers: 0, uniform: 0, handSanitizer: 0, washBasin: 0, cleaning: 0, 
-        water: 0, identification2: 0 
+        tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, 
+        refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, 
+        containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, 
+        water: 30, identification2: 30 
       },
       participation: { 
-        opening: 0, saturdayMorning: 0, saturdayEvening: 0, sundayMorning: 0, 
-        saturdayAfternoon: 0, sundayEvening: 0, directorMeetingFriday: 0, directorMeetingSaturday: 0 
+        opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, 
+        saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 
       },
-      uniform: { programmedUniform: 0, badges: 0 },
-      secretary: { firstAidKit: 0, secretaryFolder: 0, healthFolder: 0 },
-      events: { carousel: 0, extraActivities: 0, representative: 0 },
-      bonus: { pastorVisit: 0, healthProfessional: 0 },
+      uniform: { programmedUniform: 100, badges: 100 },
+      secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 },
+      events: { carousel: 100, extraActivities: 100, representative: 100 },
+      bonus: { pastorVisit: 100, healthProfessional: 100 },
       demerits: { 
         noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, 
         interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, 
         substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 
       }
     };
+    
     console.log("AdminDashboard: Setting editingScores", { currentScores });
     setEditingScores({ ...currentScores });
     console.log("AdminDashboard: startEvaluation completed");
@@ -847,6 +856,15 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
       const maxScore = criterion.max || 0;
       const partialScore = criterion.partial || 0;
+
+      console.log('🔍 BatchEvaluate Debug:', {
+        category: batchCategory,
+        criterion: batchCriterion,
+        scoreType: batchScoreType,
+        maxScore,
+        partialScore,
+        criterionData: criterion
+      });
 
       // Executar avaliação em lote
       const result = await batchEvaluateClubs({
@@ -1283,13 +1301,35 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClubs?.map((club) => {
-          console.log(`📊 AdminDashboard - Clube: ${club.name}`, {
-            scores: club.scores,
-            hasScores: !!club.scores,
-            scoringCriteria: !!scoringCriteria
-          });
-          const totalScore = calculateTotalScore(club.scores);
-          console.log(`📊 AdminDashboard - Resultado: ${club.name} = ${totalScore} pts`);
+          // CORRIGIDO: Usar pontuação máxima como padrão (mesma lógica do modal)
+          const currentScores = club.scores || {
+            prerequisites: { directorPresence: 30 },
+            campground: { 
+              portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, 
+              tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 
+            },
+            kitchen: { 
+              tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, 
+              refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, 
+              containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, 
+              water: 30, identification2: 30 
+            },
+            participation: { 
+              opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, 
+              saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 
+            },
+            uniform: { programmedUniform: 100, badges: 100 },
+            secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 },
+            events: { carousel: 100, extraActivities: 100, representative: 100 },
+            bonus: { pastorVisit: 100, healthProfessional: 100 },
+            demerits: { 
+              noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, 
+              interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, 
+              substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 
+            }
+          };
+          
+          const totalScore = calculateTotalScore(currentScores);
           
           return (
           <div
@@ -2089,22 +2129,30 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Pontuação:</span>
                   <span className="font-medium text-gray-900">
-                    {club.totalScore?.toLocaleString() || 0} pts
+                    {(() => {
+                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                      return calculateTotalScore(clubScores).toLocaleString();
+                    })()} pts
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Classificação:</span>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    club.classification === "MISSIONÁRIO" 
+                    (() => {
+                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                      const calc = getClassification(calculateTotalScore(clubScores));
+                      return calc === "MISSIONÁRIO" 
                       ? "bg-yellow-100 text-yellow-800"
-                      : club.classification === "VOLUNTÁRIO"
+                      : calc === "VOLUNTÁRIO"
                       ? "bg-blue-100 text-blue-800"
-                      : "bg-orange-100 text-orange-800"
+                      : "bg-orange-100 text-orange-800";
+                    })()
                   }`}>
-                    {club.classification === "MISSIONÁRIO" ? "MISSIONÁRIO" : 
-                     club.classification === "VOLUNTÁRIO" ? "VOLUNTÁRIO" : 
-                     "APRENDIZ"}
+                    {(() => {
+                      const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                      return getClassification(calculateTotalScore(clubScores));
+                    })()}
                   </span>
                 </div>
                 
@@ -2899,17 +2947,27 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                     <td className="px-6 py-4 whitespace-nowrap">{club.region}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{club.membersCount || 0}</td>
                     <td className="px-6 py-4 whitespace-nowrap font-bold">
-                      {club.totalScore.toLocaleString()} pts
+                      {(() => {
+                        const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                        return calculateTotalScore(clubScores).toLocaleString();
+                      })()} pts
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        club.classification === "MISSIONÁRIO" 
+                        (() => {
+                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                          const calc = getClassification(calculateTotalScore(clubScores));
+                          return calc === "MISSIONÁRIO" 
                           ? "bg-yellow-100 text-yellow-800"
-                          : club.classification === "VOLUNTÁRIO"
+                          : calc === "VOLUNTÁRIO"
                           ? "bg-blue-100 text-blue-800"
-                          : "bg-orange-100 text-orange-800"
+                          : "bg-orange-100 text-orange-800";
+                        })()
                       }`}>
-                        {club.classification}
+                        {(() => {
+                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                          return getClassification(calculateTotalScore(clubScores));
+                        })()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -3261,15 +3319,21 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
 
                     <div className="text-right">
                       <div className="text-2xl font-bold text-gray-900">
-                        {club.totalScore?.toLocaleString()} pts
+                        {(() => {
+                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                          return calculateTotalScore(clubScores).toLocaleString();
+                        })()} pts
                       </div>
                       <div className="flex items-center justify-end space-x-2 mt-1">
-                        {club.classification === "MISSIONÁRIO" ? (
+                        {(() => {
+                          const clubScores = club.scores || { prerequisites: { directorPresence: 30 }, campground: { portal: 150, clothesline: 100, pioneers: 100, campfireArea: 100, materials: 100, tentOrganization: 100, security: 150, readyCamp: 100, chairsOrBench: 100 }, kitchen: { tentSetup: 100, identification: 50, tentSize: 100, gasRegister: 50, firePosition: 50, refrigerator: 50, tables: 50, extinguisher: 50, menu: 50, menuDisplay: 50, containers: 50, uniform: 50, handSanitizer: 30, washBasin: 30, cleaning: 30, water: 30, identification2: 30 }, participation: { opening: 100, saturdayMorning: 100, saturdayEvening: 100, sundayMorning: 100, saturdayAfternoon: 100, sundayEvening: 100, directorMeetingFriday: 50, directorMeetingSaturday: 50 }, uniform: { programmedUniform: 100, badges: 100 }, secretary: { firstAidKit: 100, secretaryFolder: 100, healthFolder: 100 }, events: { carousel: 100, extraActivities: 100, representative: 100 }, bonus: { pastorVisit: 100, healthProfessional: 100 }, demerits: { noIdentification: 0, unaccompanied: 0, inappropriate: 0, campingActivity: 0, interference: 0, improperClothing: 0, disrespect: 0, improperBehavior: 0, substances: 0, sexOpposite: 0, artificialFires: 0, unauthorizedVehicles: 0 } };
+                          const calc = getClassification(calculateTotalScore(clubScores));
+                          return calc === "MISSIONÁRIO" ? (
                           <div className="flex items-center text-yellow-600 font-medium">
                             <Crown size={16} className="mr-1" />
                             MISSIONÁRIO
                           </div>
-                        ) : club.classification === "VOLUNTÁRIO" ? (
+                        ) : calc === "VOLUNTÁRIO" ? (
                           <div className="flex items-center text-blue-600 font-medium">
                             <Trophy size={16} className="mr-1" />
                             VOLUNTÁRIO
@@ -3279,7 +3343,8 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                             <Star size={16} className="mr-1" />
                             APRENDIZ
                           </div>
-                        )}
+                        );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -3824,22 +3889,6 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                 Corrigir Classificações Iniciais
               </button>
               <button
-                onClick={async () => {
-                  if (!confirm('Isso vai corrigir os clubes que foram avaliados em lote antes da atualização e estão mostrando 0 pontos. Continuar?')) return;
-                  try {
-                    toast.info('Migrando dados antigos...');
-                    const result = await migrateOldBatchEvaluations({});
-                    toast.success(`Migração concluída! ${result.clubsMigrated} clubes corrigidos de ${result.totalClubsChecked} verificados.`);
-                  } catch (error: any) {
-                    toast.error(`Erro na migração: ${error.message}`);
-                  }
-                }}
-                className="w-full bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm flex items-center justify-center gap-2"
-              >
-                <RefreshCw size={16} />
-                Corrigir Avaliações Antigas
-              </button>
-              <button
                 onClick={handleImportClubs}
                 className="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 text-sm flex items-center justify-center gap-2"
               >
@@ -3935,10 +3984,11 @@ export default function AdminDashboard({ user, onLogout }: AdminDashboardProps) 
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900">{log.userName}</span>
+                            <span className="font-semibold text-gray-900">{log.userName || 'Avaliador'}</span>
                             <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-medium">
                               {log.userRole === 'admin' ? '👑 Admin' :
                                log.userRole === 'regional' ? '🗺️ Regional' :
+                               log.userRole === 'mda' ? '💼 MDA' :
                                '⭐ Staff'}
                             </span>
                           </div>

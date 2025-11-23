@@ -165,28 +165,43 @@ export const clearAllCriteriaLocks = mutation({
       throw new Error("Apenas administradores podem limpar travamentos");
     }
 
-    let evaluations;
+    // OTIMIZADO: Usar take() com limite razoável para evitar "too many reads"
+    const BATCH_SIZE = 500; // Limite seguro
     
     if (args.clubId) {
       // Limpar travamentos de um clube específico
-      evaluations = await ctx.db
+      const evaluations = await ctx.db
         .query("evaluatedCriteria")
         .withIndex("by_club", (q) => q.eq("clubId", args.clubId!))
-        .collect();
+        .take(BATCH_SIZE);
+      
+      // Deletar em lote
+      for (const evaluation of evaluations) {
+        await ctx.db.delete(evaluation._id);
+      }
+      
+      return {
+        message: "Travamentos do clube removidos com sucesso",
+        count: evaluations.length
+      };
     } else {
-      // Limpar todos os travamentos de todos os clubes
-      evaluations = await ctx.db.query("evaluatedCriteria").collect();
+      // Limpar todos os travamentos (com limite de segurança)
+      const evaluations = await ctx.db
+        .query("evaluatedCriteria")
+        .take(BATCH_SIZE);
+      
+      // Deletar em lote
+      for (const evaluation of evaluations) {
+        await ctx.db.delete(evaluation._id);
+      }
+      
+      return {
+        message: evaluations.length === BATCH_SIZE 
+          ? `${evaluations.length} travamentos removidos. Pode haver mais, execute novamente se necessário.`
+          : `Todos os ${evaluations.length} travamentos removidos com sucesso`,
+        count: evaluations.length
+      };
     }
-
-    // Deletar todas as avaliações encontradas
-    await Promise.all(evaluations.map(evaluation => ctx.db.delete(evaluation._id)));
-
-    return {
-      message: args.clubId 
-        ? "Travamentos do clube removidos com sucesso" 
-        : "Todos os travamentos removidos com sucesso",
-      count: evaluations.length
-    };
   },
 });
 
@@ -319,12 +334,15 @@ export const batchEvaluateClubs = mutation({
         if (args.scoreType === "maximum") {
           // Atendeu 100% = Ganhou pontuação máxima
           displayScore = args.maxScore;
+          console.log(`✅ BATCH EVAL: ${args.scoreType} → displayScore=${displayScore} (max=${args.maxScore})`);
         } else if (args.scoreType === "partial") {
           // Atendeu parcialmente = Ganhou pontuação parcial
           displayScore = args.partialScore;
+          console.log(`⚠️ BATCH EVAL: ${args.scoreType} → displayScore=${displayScore} (partial=${args.partialScore})`);
         } else {
           // Não atendeu = Ganhou 0 pontos
           displayScore = 0;
+          console.log(`❌ BATCH EVAL: ${args.scoreType} → displayScore=0`);
         }
         
         // Se há subKey, atualizar dentro do objeto aninhado

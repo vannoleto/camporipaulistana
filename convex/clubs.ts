@@ -546,7 +546,7 @@ export const initializeClubs = mutation({
 
 export const resetAllClubScores = mutation({
   args: {},
-  handler: async (ctx): Promise<string> => {
+  handler: async (ctx): Promise<{ success: boolean; deletedLogs: number; deletedCriteria: number; updatedClubs: number; hasMore: boolean; message: string; }> => {
     // Buscar critérios de pontuação atuais - removendo a dependência de query externa (updated)
     // const criteria = await ctx.runQuery(api.scoring.getScoringCriteria, {});
     // if (!criteria) {
@@ -602,53 +602,70 @@ export const resetAllClubScores = mutation({
       },
     };
 
-    // Limpar logs de atividade em lotes pequenos para evitar limite de leituras
-    let activityLogsBatch = await ctx.db.query("activityLogs").take(100);
-    while (activityLogsBatch.length > 0) {
-      for (const log of activityLogsBatch) {
-        await ctx.db.delete(log._id);
-      }
-      activityLogsBatch = await ctx.db.query("activityLogs").take(100);
+    // ESTRATÉGIA ULTRA-OTIMIZADA: Processar apenas 50 itens por execução
+    // Para resetar tudo, executar múltiplas vezes até não haver mais dados
+    const BATCH_SIZE = 50;
+    
+    let operations = {
+      deletedLogs: 0,
+      deletedCriteria: 0,
+      updatedClubs: 0
+    };
+
+    // Fase 1: Deletar logs (50 de cada vez)
+    const activityLogs = await ctx.db.query("activityLogs").take(BATCH_SIZE);
+    for (const log of activityLogs) {
+      await ctx.db.delete(log._id);
+      operations.deletedLogs++;
     }
 
-    // Limpar critérios travados em lotes pequenos
-    let evaluatedCriteriaBatch = await ctx.db.query("evaluatedCriteria").take(100);
-    while (evaluatedCriteriaBatch.length > 0) {
-      for (const criteria of evaluatedCriteriaBatch) {
-        await ctx.db.delete(criteria._id);
-      }
-      evaluatedCriteriaBatch = await ctx.db.query("evaluatedCriteria").take(100);
+    // Fase 2: Deletar critérios travados (50 de cada vez)
+    const evaluatedCriteria = await ctx.db.query("evaluatedCriteria").take(BATCH_SIZE);
+    for (const criteria of evaluatedCriteria) {
+      await ctx.db.delete(criteria._id);
+      operations.deletedCriteria++;
     }
 
-    // Atualizar todos os clubes em lotes pequenos
-    let clubsBatch = await ctx.db.query("clubs").take(100);
-    let updatedCount = 0;
+    // Fase 3: Atualizar clubes (50 de cada vez)
+    const clubs = await ctx.db.query("clubs").take(BATCH_SIZE);
     const totalScore = calculateTotalScore(maxScores);
     const classification = getClassification(totalScore);
     
-    while (clubsBatch.length > 0) {
-      for (const club of clubsBatch) {
-        await ctx.db.patch(club._id, {
-          totalScore,
-          classification,
-          scores: maxScores,
-        });
-        updatedCount++;
-      }
-      clubsBatch = await ctx.db.query("clubs").take(100);
+    for (const club of clubs) {
+      await ctx.db.patch(club._id, {
+        totalScore,
+        classification,
+        scores: maxScores,
+      });
+      operations.updatedClubs++;
     }
 
-    // Criar log do reset geral
-    await ctx.db.insert("activityLogs", {
-      userId: undefined,
-      userName: "Sistema",
-      userRole: "system",
-      action: "system_reset",
-      details: `Sistema resetado: ${updatedCount} clubes resetados para pontuação máxima (1910 pts). Todo o histórico de avaliações foi limpo.`,
-      timestamp: Date.now(),
-    });
+    // Verificar se ainda há mais dados para processar
+    const hasMoreLogs = activityLogs.length === BATCH_SIZE;
+    const hasMoreCriteria = evaluatedCriteria.length === BATCH_SIZE;
+    const hasMoreClubs = clubs.length === BATCH_SIZE;
+    const hasMore = hasMoreLogs || hasMoreCriteria || hasMoreClubs;
 
-    return `Reset concluído! ${updatedCount} clubes foram resetados para pontuação máxima (1910 pontos). Todo o histórico de avaliações foi limpo.`;
+    // Log apenas se for a última execução ou se não houver mais dados
+    if (!hasMore) {
+      await ctx.db.insert("activityLogs", {
+        userId: undefined,
+        userName: "Sistema",
+        userRole: "system",
+        action: "system_reset",
+        details: `Reset completo! Total processado: ${operations.updatedClubs} clubes, ${operations.deletedLogs} logs deletados, ${operations.deletedCriteria} critérios limpos.`,
+        timestamp: Date.now(),
+      });
+    }
+
+    return { 
+      success: true, 
+      ...operations,
+      hasMore,
+      message: hasMore 
+        ? `Processando em lotes... Execute novamente. (${operations.updatedClubs} clubes, ${operations.deletedLogs} logs, ${operations.deletedCriteria} critérios)`
+        : `✅ Reset completo! ${operations.updatedClubs} clubes resetados para 1910 pontos.`
+    };
   },
 });
 

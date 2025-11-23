@@ -258,64 +258,44 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
   // Função para calcular pontuação total baseada na estrutura de pontuações (IGUAL AO ADMINDASHBOARD E STAFFDASHBOARD)
   // SISTEMA: Clubes iniciam com 1910 pontos e PERDEM pontos por não atender critérios
   const calculateTotalScore = (scores: any) => {
-    if (!scores || !scoringCriteria) return 1910; // Pontuação máxima inicial
+    if (!scoringCriteria) return 1910; // Pontuação máxima inicial
 
     const MAX_SCORE = 1910;
-    let totalPenalty = 0;
+    let totalEarned = 0;
     let demeritsPenalty = 0;
 
-    // Calcular penalidades baseado nos critérios dinâmicos
-    Object.keys(scores).forEach(category => {
-      if (!scoringCriteria[category]) return; // Ignorar categorias sem critérios
-
-      const categoryScores = scores[category];
-      if (typeof categoryScores !== 'object') return;
-
-      // DEMÉRITOS: São valores negativos, somar diretamente
-      if (category === 'demerits') {
-        Object.keys(categoryScores).forEach(key => {
-          const demeritValue = categoryScores[key];
-          if (typeof demeritValue === 'number') {
-            demeritsPenalty += Math.abs(demeritValue); // Converter para positivo para somar à penalidade
+    // Calcular pontos GANHOS de todas as categorias usando ACTIVITY LOGS
+    if (activityLogs && activityLogs.length > 0) {
+      // Agrupar logs por categoria/subcategoria para pegar o valor mais recente
+      const latestScores: any = {};
+      
+      activityLogs.forEach((log: any) => {
+        if (log.scoreChange) {
+          const key = `${log.scoreChange.category}_${log.scoreChange.subcategory}`;
+          if (!latestScores[key] || log.timestamp > latestScores[key].timestamp) {
+            latestScores[key] = {
+              category: log.scoreChange.category,
+              subcategory: log.scoreChange.subcategory,
+              value: log.scoreChange.newValue,
+              timestamp: log.timestamp
+            };
           }
-        });
-        return;
-      }
-
-      // OUTRAS CATEGORIAS: Sistema de penalidade por não atingir máximo
-      Object.keys(categoryScores).forEach(key => {
-        const earnedPoints = categoryScores[key];
-        if (typeof earnedPoints !== 'number') return; // Ignorar objetos aninhados
-
-        const criterion = scoringCriteria[category]?.[key];
-        if (!criterion) return; // Ignorar critérios não definidos
-
-        const maxPoints = criterion.max || 0;
-        const partialPoints = criterion.partial || 0;
-
-        // Calcular penalidade baseado no que foi conquistado
-        let penalty = 0;
-
-        if (earnedPoints === maxPoints) {
-          // Ganhou pontuação máxima → Não perde nada
-          penalty = 0;
-        } else if (earnedPoints === partialPoints && partialPoints > 0) {
-          // Ganhou pontuação parcial → Perde a diferença (max - parcial)
-          penalty = maxPoints - partialPoints;
-        } else if (earnedPoints === 0) {
-          // Ganhou zero → Perde tudo (max)
-          penalty = maxPoints;
-        } else {
-          // Caso customizado: perde a diferença entre max e o que ganhou
-          penalty = maxPoints - earnedPoints;
         }
-
-        totalPenalty += penalty;
       });
-    });
 
-    // Pontuação final = Máximo (1910) - Penalidades totais - Deméritos
-    return Math.max(0, MAX_SCORE - totalPenalty - demeritsPenalty);
+      // Somar todos os pontos ganhos
+      Object.values(latestScores).forEach((score: any) => {
+        if (score.category === 'demerits') {
+          demeritsPenalty += Math.abs(score.value);
+        } else {
+          totalEarned += score.value || 0;
+        }
+      });
+    }
+
+    // Pontuação final = Pontos ganhos - Deméritos
+    // NÃO subtrair do máximo, apenas somar o que foi ganho
+    return Math.max(0, totalEarned - demeritsPenalty);
   };
 
   // Função para obter classificação baseada na pontuação
@@ -905,6 +885,24 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
     );
   };
 
+  // FUNÇÃO PARA BUSCAR PONTUAÇÃO REAL DOS ACTIVITY LOGS
+  const getActualScoreFromLogs = (category: string, subcategory: string): number => {
+    if (!activityLogs || activityLogs.length === 0) return 0;
+    
+    // Buscar o último log que corresponde a essa categoria e subcategoria
+    const relevantLogs = activityLogs.filter((log: any) => 
+      log.scoreChange && 
+      log.scoreChange.category === category && 
+      log.scoreChange.subcategory === subcategory
+    );
+    
+    if (relevantLogs.length === 0) return 0;
+    
+    // Pegar o log mais recente (último do array, pois está ordenado por timestamp)
+    const latestLog = relevantLogs[relevantLogs.length - 1];
+    return latestLog.scoreChange.newValue || 0;
+  };
+
   const renderScoring = () => {
     if (!userClub || !scoringCriteria) {
       return <div>Carregando...</div>;
@@ -948,8 +946,8 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <div className="px-3 py-1 bg-gray-100 border rounded text-center font-medium">
-                            {scores.carousel[carouselKey]} pts
+                          <div className="px-3 py-1 bg-blue-100 border-2 border-blue-500 rounded text-center font-bold text-blue-700">
+                            {getActualScoreFromLogs(category, carouselKey)} pts
                           </div>
                         </div>
                       </div>
@@ -959,7 +957,7 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
               );
             }
 
-            const currentValue = scores[key];
+            const currentValue = getActualScoreFromLogs(category, key);
             return (
               <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex-1">
@@ -974,11 +972,11 @@ export function DirectorDashboard({ user, onLogout, activeTab: externalActiveTab
                 </div>
                 <div className="flex items-center space-x-2">
                   {isDemerits ? (
-                    <div className="w-20 px-2 py-1 bg-gray-100 border rounded text-center font-medium">
+                    <div className="w-20 px-2 py-1 bg-red-100 border-2 border-red-500 rounded text-center font-bold text-red-700">
                       {currentValue} pts
                     </div>
                   ) : (
-                    <div className="px-3 py-1 bg-gray-100 border rounded text-center font-medium">
+                    <div className="px-3 py-1 bg-green-100 border-2 border-green-500 rounded text-center font-bold text-green-700">
                       {currentValue} pts
                     </div>
                   )}
